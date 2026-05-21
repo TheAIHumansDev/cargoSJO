@@ -424,13 +424,12 @@ if (userDataString) {
         document.getElementById('usernameDisplay').textContent = inspectionUser.username;
         document.getElementById('userRole').textContent = inspectionUser.role;
     } catch(e) {
-        alert('Sesión inválida.'); window.location.href = 'login-P10.html';
+        alert('Sesión inválida. Por favor inicie sesión nuevamente.');
+        window.location.href = 'login-P10.html';
     }
 } else {
-    // Dev fallback — comment out in prod
-    inspectionUser = { username: 'Demo', role: 'Inspector' };
-    document.getElementById('usernameDisplay').textContent = 'Demo';
-    document.getElementById('userRole').textContent = 'Inspector';
+    alert('Por favor inicie sesión primero.');
+    window.location.href = 'login-P10.html';
 }
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
