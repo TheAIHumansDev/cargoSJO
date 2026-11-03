@@ -201,7 +201,7 @@ textarea{width:100%;min-height:80px;padding:12px;background:rgba(30,41,59,.6);bo
       <div id="resumeLocalBanner"></div>
       <div class="card-surface" style="max-width:560px;margin:0 auto 16px;">
         <h2 class="question-title">📦 Nueva Inspección de Carga</h2>
-        <p class="question-subtitle">Aerolínea y número de vuelo</p>
+        <p class="question-subtitle">Aerolínea y números de vuelo</p>
         <div class="form-group">
           <label for="airlineSelect">Aerolínea</label>
           <select id="airlineSelect">
@@ -225,9 +225,15 @@ textarea{width:100%;min-height:80px;padding:12px;background:rgba(30,41,59,.6);bo
             </optgroup>
           </select>
         </div>
-        <div class="form-group">
-          <label for="flightNumber">Número de vuelo</label>
-          <input type="text" id="flightNumber" placeholder="Ej: 1234" autocomplete="off" autocapitalize="characters">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="form-group">
+            <label for="arrivalFlight">✈️⬇ Vuelo de llegada</label>
+            <input type="text" id="arrivalFlight" placeholder="Ej: 1234" autocomplete="off" autocapitalize="characters">
+          </div>
+          <div class="form-group">
+            <label for="departureFlight">✈️⬆ Vuelo de salida</label>
+            <input type="text" id="departureFlight" placeholder="Ej: 1235" autocomplete="off" autocapitalize="characters">
+          </div>
         </div>
         <button class="btn-primary" onclick="startNewInspection()">Iniciar inspección →</button>
       </div>
@@ -358,11 +364,12 @@ textarea{width:100%;min-height:80px;padding:12px;background:rgba(30,41,59,.6);bo
 // ═════════════════════════════════════════════════════════════════════════════
 //  CONFIG
 // ═════════════════════════════════════════════════════════════════════════════
-const SCRIPT_URL   = 'https://script.google.com/macros/s/AKfycbyIyjc9yfcY25YKe_qan-ocdMkaV8eDUDqe-vseyBSCcGm3G-3ZT957_skuzjJkmpdD0g/exec';
+// URL /exec de la implementación del Code.gs nuevo (la MISMA en login, T07 y H08)
+const SCRIPT_URL   = 'PEGAR_AQUI_URL_EXEC';
 const LOGIN_PAGE   = 'login-P10.html';
 const HISTORY_PAGE = 'H08.html';
 const FLIGHT_TYPE  = 'CARGO';
-const LS_KEY       = 'rampaCargo.active.v2';
+const LS_KEY       = 'rampaCargo.active.v3';
 const PHOTO_MAX_W  = 1280;   // px — ~150-250 KB por foto
 const THUMB_W      = 220;
 
@@ -411,12 +418,14 @@ const PHASES = [
   { id:'pre',      title:'Pre-arribo' },
   { id:'arribo',   title:'Arribo y posicionamiento' },
   { id:'descarga', title:'Descarga' },
-  { id:'cargado',  title:'Cargado' },
+  { id:'cargado',  title:'Inicia Cargado' },
+  { id:'verif',    title:'Verificación' },
+  { id:'fcargado', title:'Finaliza Cargado' },
   { id:'salida',   title:'Salida' },
 ];
 
 // label = nombre EXACTO de la columna en la hoja CARGO del Sheet
-// (debe coincidir con CHECKPOINT_LABELS_V2 de CHECKPOINTS_V2['CARGO'] en code2.gs)
+// (debe coincidir con CHECKPOINT_COLUMNS en Code.gs)
 const CHECKPOINTS = [
   { key:'briefing',          label:'Briefing',              emoji:'📋', phase:'pre',      type:'briefing' },
   { key:'foto_briefing',     label:'Foto Briefing',         emoji:'📸', phase:'pre' },
@@ -430,7 +439,9 @@ const CHECKPOINTS = [
   { key:'finaliza_descarga', label:'Finaliza Descarga',     emoji:'✅', phase:'descarga', type:'zones' },
   { key:'fod_durante',       label:'FOD Durante Operación', emoji:'🔍', phase:'descarga' },
   { key:'inicia_cargado',    label:'Inicia Cargado',        emoji:'⬆️', phase:'cargado',  type:'zones' },
-  { key:'finaliza_cargado',  label:'Finaliza Cargado',      emoji:'✅', phase:'cargado',  type:'zones' },
+  { key:'verif_seguros',     label:'Verificación - Seguros',  title:'Seguros',  emoji:'🔒', phase:'verif', type:'multi' },
+  { key:'verif_posicion',    label:'Verificación - Posición', title:'Posición', emoji:'📍', phase:'verif', type:'multi' },
+  { key:'finaliza_cargado',  label:'Finaliza Cargado',      emoji:'✅', phase:'fcargado', type:'zones' },
   { key:'remolque',          label:'Remolque',              emoji:'🔧', phase:'salida' },
   { key:'360_fin',           label:'360 Fin Operación',     emoji:'🔄', phase:'salida',   type:'multi' },
   { key:'push_back',         label:'Push Back',             emoji:'⬅️', phase:'salida' },
@@ -438,7 +449,7 @@ const CHECKPOINTS = [
 ];
 
 const zoneItem = (cp, z) => `${cp.label} - ${z.label}`;
-// Lista plana de columnas del Sheet (29)
+// Lista plana de columnas del Sheet (31)
 const CARGO_ITEMS = CHECKPOINTS.flatMap(cp => cp.type === 'zones' ? ZONES.map(z => zoneItem(cp, z)) : [cp.label]);
 const NON_COLUMN_ITEMS = ['Incidente', 'Observaciones'];
 
@@ -451,7 +462,11 @@ let S = null;
 function newState(o) {
   return {
     airline: o.airline, airlineName: o.airlineName || AIRLINE_NAMES[o.airline] || o.airline,
-    flightNumber: o.flightNumber, flightTimestamp: o.flightTimestamp, flightKey: o.flightKey || '',
+    arrivalFlight: o.arrivalFlight, departureFlight: o.departureFlight || '',
+    flightNumber: o.departureFlight ? `${o.arrivalFlight} / ${o.departureFlight}` : o.arrivalFlight,
+    flightTimestamp: o.flightTimestamp,
+    // Misma fórmula que buildFlightKey() en Code.gs
+    flightKey: o.flightKey || [o.airline, o.arrivalFlight, o.departureFlight || '-', o.flightTimestamp].join('_'),
     items: {}, briefing: { topics: [], notes: '' }, incidents: [], completed: false
   };
 }
@@ -459,14 +474,14 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 const norm = s => String(s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 const fmtTime = d => new Date(d).toLocaleTimeString('es-CR', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false });
-// Acepta ISO o "HH:mm:ss" (formato que guarda code2.gs; varias capturas = varias líneas)
+// Acepta ISO o "HH:mm:ss" (formato del Sheet; varias capturas = varias líneas)
 const fmtShort = d => {
   const raw = String(d ?? '').split('\n')[0].trim();
   const t = raw.match(/^(\d{1,2}):(\d{2})/);
   if (t) return t[1].padStart(2, '0') + ':' + t[2];
   const x = new Date(raw); return isNaN(x) ? '–' : x.toLocaleTimeString('es-CR', { hour:'2-digit', minute:'2-digit', hour12:false });
 };
-// code2.gs comparte las fotos "con el enlace" → Drive sirve miniatura
+// Fotos compartidas "con el enlace" → Drive sirve miniatura
 const driveThumb = url => { const m = String(url || '').match(/\/d\/([\w-]+)/) || String(url || '').match(/[?&]id=([\w-]+)/); return m ? `https://drive.google.com/thumbnail?id=${m[1]}&sz=w400` : null; };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -575,8 +590,9 @@ window.addEventListener('beforeunload', e => {
 function basePayload() {
   return {
     action: 'saveInspection', flightType: FLIGHT_TYPE,
-    airline: S.airline, airlineName: S.airlineName, flightNumber: S.flightNumber,
-    flightTimestamp: S.flightTimestamp, flightKey: S.flightKey || undefined,
+    airline: S.airline, airlineName: S.airlineName,
+    arrivalFlight: S.arrivalFlight, departureFlight: S.departureFlight,
+    flightTimestamp: S.flightTimestamp, flightKey: S.flightKey,
     inspector: inspectionUser.username, role: inspectionUser.role, status: 'En Proceso'
   };
 }
@@ -622,12 +638,14 @@ function show(id) {
 
 function startNewInspection() {
   const airline = document.getElementById('airlineSelect').value;
-  const flight  = document.getElementById('flightNumber').value.trim().toUpperCase();
+  const arr = document.getElementById('arrivalFlight').value.trim().toUpperCase();
+  const dep = document.getElementById('departureFlight').value.trim().toUpperCase();
   if (!airline) { alert('Seleccione la aerolínea'); return; }
-  if (!flight)  { alert('Ingrese el número de vuelo'); return; }
+  if (!arr)     { alert('Ingrese el vuelo de llegada'); return; }
+  if (!dep)     { alert('Ingrese el vuelo de salida'); return; }
   const local = loadLocal();
   if (local && !local.completed && !confirm(`Hay una inspección en curso (${local.airlineName} ${local.flightNumber}). ¿Descartarla del dispositivo y empezar otra?\n(Lo ya enviado queda en el historial)`)) return;
-  S = newState({ airline, flightNumber: flight, flightTimestamp: new Date().toISOString() });
+  S = newState({ airline, arrivalFlight: arr, departureFlight: dep, flightTimestamp: new Date().toISOString() });
   saveLocal();
   openBoard();
 }
@@ -641,32 +659,34 @@ function loadFromReport(r) {
   const local = loadLocal();
   S = (local && r.flightKey && local.flightKey === r.flightKey)
     ? local
-    : newState({ airline: r.airline, airlineName: r.airlineName, flightNumber: r.flightNumber,
+    : newState({ airline: r.airline, airlineName: r.airlineName,
+                 arrivalFlight: r.arrivalFlight || r.flightNumber, departureFlight: r.departureFlight,
                  flightTimestamp: r.flightTimestamp, flightKey: r.flightKey });
   S.flightKey = r.flightKey || S.flightKey;
-  S.flightTimestamp = S.flightTimestamp || r.flightTimestamp;
 
-  // code2.gs guarda una línea "HH:mm:ss" por captura en la celda del checkpoint
+  const photosBy = {};
+  (r.photos || []).forEach(p => { const l = matchItem(p.item); if (l) (photosBy[l] = photosBy[l] || []).push(p); });
+
+  // Cada captura = una línea "HH:mm:ss" en la celda; las fotos vienen de la hoja Fotos
   (r.checkpoints || []).forEach(cp => {
     const label = matchItem(cp.label); if (!label) return;
     const it = item(label);
     const times = String(cp.timestamp || '').split('\n').map(x => x.trim()).filter(x => /^\d{1,2}:\d{2}/.test(x));
+    const ph = (photosBy[label] || []).sort((a, b) => (Number(a.index) || 0) - (Number(b.index) || 0));
+    const n = Math.max(times.length, ph.length, 1);
     if (!it.ts) it.ts = times[times.length - 1] || cp.timestamp;
-    const localPhotos = it.entries.filter(e => e.status !== 'remote').length;
-    // Una entrada remota por captura que no esté ya en el dispositivo
-    for (let i = localPhotos; i < Math.max(times.length, 1); i++) {
-      it.entries.push({ id: uid(), ts: times[i] || cp.timestamp, status: 'remote', photo: label !== 'Briefing' });
+    // Solo agrega lo que no esté ya en este dispositivo
+    for (let i = it.entries.length; i < n; i++) {
+      it.entries.push({ id: uid(), ts: times[i] || (ph[i] && ph[i].timestamp) || it.ts,
+                        url: ph[i] ? ph[i].url : undefined, status: 'remote', photo: !!ph[i] });
     }
   });
-  // Foto más reciente de cada checkpoint (code2.gs la deja en la nota de la celda)
-  (r.photos || []).forEach(p => {
-    const label = matchItem(p.item); if (!label) return;
-    const it = item(label);
-    const last = [...it.entries].reverse().find(e => e.status === 'remote');
-    if (last && !it.entries.some(e => e.url === p.url)) last.url = p.url;
-  });
+  if (r.briefing && r.briefing.topics && !S.briefing.topics.length) {
+    S.briefing = { topics: String(r.briefing.topics).split(' | ').filter(Boolean), notes: r.briefing.notes || '' };
+  }
   if (Array.isArray(r.incidents) && r.incidents.length && !S.incidents.length) {
-    S.incidents = r.incidents.map(i => ({ ...i, time: i.registrado ? fmtTime(i.registrado) : '', photoLabel: i.photoLabel || (i.photoUrl ? 'Foto de incidente' : null) }));
+    S.incidents = r.incidents.map(i => ({ ...i, time: i.registrado ? fmtTime(i.registrado) : '',
+                                          photoLabel: i.photoLabel || (i.photoUrl ? 'Foto de incidente' : null) }));
   }
   saveLocal();
 }
@@ -679,7 +699,8 @@ function openBoard() {
 function resetToSetup() {
   S = null; clearLocal();
   document.getElementById('airlineSelect').value = '';
-  document.getElementById('flightNumber').value = '';
+  document.getElementById('arrivalFlight').value = '';
+  document.getElementById('departureFlight').value = '';
   renderLocalBanner();
   document.getElementById('progressBar').style.width = '0%';
   document.getElementById('stepCounter').textContent = 'Nueva inspección';
@@ -746,7 +767,7 @@ function tileHtml(cp) {
   return `<button class="tile st-${st}" onclick="onTile('${cp.key}')">
       ${badge}
       <div class="tile-thumb">${thumb}</div>
-      <div class="tile-name">${cp.label}${cp.optional ? '<small>Opcional</small>' : ''}</div>
+      <div class="tile-name">${cp.title || cp.label}${cp.optional ? '<small>Opcional</small>' : ''}</div>
       <div class="tile-meta"><span>${statusText(st, S.items[cp.label]?.ts)}${brief}</span></div>
     </button>`;
 }
@@ -758,7 +779,7 @@ function renderHeader() {
   document.getElementById('progressBar').style.width = pct + '%';
   document.getElementById('stepCounter').textContent = `${done} de ${total} items`;
   document.getElementById('fsBadge').textContent = S.airline;
-  document.getElementById('fsTitle').textContent = `${S.airlineName} · Vuelo ${S.flightNumber}`;
+  document.getElementById('fsTitle').textContent = `${S.airlineName} · ⬇${S.arrivalFlight} ⬆${S.departureFlight || '–'}`;
   document.getElementById('fsMeta').textContent = `Inicio ${fmtShort(S.flightTimestamp)} · ${CARGO_ITEMS.reduce((a, l) => a + photoCount(l), 0)} fotos`;
   document.getElementById('fsPct').textContent = pct + '%';
   document.getElementById('incCount').textContent = S.incidents.length ? `(${S.incidents.length})` : '';
@@ -779,7 +800,7 @@ function onTile(key) {
   const st = itemStatus(cp.label);
   if (st === 'error') { retryFailed(); return; }
   if (cp.type === 'multi') {
-    openCamera({ title: `${cp.emoji} ${cp.label}`, label: cp.label, multi: true });
+    openCamera({ title: `${cp.emoji} ${cp.label}`, label: cp.label, multi: true });   // 1+ fotos
     return;
   }
   if (st !== 'pending' && !confirm(`"${cp.label}" ya se registró a las ${fmtShort(S.items[cp.label].ts)}.\n¿Capturar una nueva foto? (se conserva la anterior en Drive)`)) return;
@@ -1044,7 +1065,8 @@ async function finishInspection() {
   btn.textContent = '⏳ Cerrando inspección…';
   try {
     await post({
-      action: 'updateStatus', flightType: FLIGHT_TYPE, airline: S.airline, flightNumber: S.flightNumber,
+      action: 'updateStatus', flightType: FLIGHT_TYPE, airline: S.airline,
+      arrivalFlight: S.arrivalFlight, departureFlight: S.departureFlight,
       flightTimestamp: S.flightTimestamp, flightKey: S.flightKey || undefined, status: 'Completado'
     });
   } catch (e) {
@@ -1062,7 +1084,8 @@ function showCompletion() {
   const done = CARGO_ITEMS.filter(isDone).length;
   const photos = CARGO_ITEMS.reduce((a, l) => a + photoCount(l), 0);
   document.getElementById('doneSummary').innerHTML = [
-    ['Aerolínea', S.airlineName], ['Vuelo', S.flightNumber], ['Inspector', inspectionUser.username],
+    ['Aerolínea', S.airlineName], ['Vuelo llegada', S.arrivalFlight], ['Vuelo salida', S.departureFlight || '–'],
+    ['Inspector', inspectionUser.username],
     ['Inicio', fmtTime(S.flightTimestamp)], ['Cierre', fmtTime(new Date())],
     ['Items', `${done} / ${CARGO_ITEMS.length}`], ['Fotos', photos]
   ].map(([k, v]) => `<div class="summary-item"><span class="summary-label">${k}</span><span class="summary-value">${esc(v)}</span></div>`).join('');
@@ -1120,6 +1143,9 @@ function toast(msg, err = false) {
 
 // ── Arranque ─────────────────────────────────────────────────────────────────
 (function boot() {
+  if (!/^https:\/\/script\.google\.com\//.test(SCRIPT_URL)) {
+    alert('Configuración pendiente: pegue la URL /exec del Apps Script en SCRIPT_URL (T07.html).');
+  }
   const raw = sessionStorage.getItem('resumeReport');
   if (raw) {
     sessionStorage.removeItem('resumeReport');
@@ -1141,7 +1167,7 @@ function toast(msg, err = false) {
   show('screenSetup');
 })();
 
-console.log('📦 Rampa Cargo v3.0 — tablero único, retomar, fotos a Drive');
+console.log('📦 Rampa Cargo v4.0 — solo carga · llegada/salida · verificación');
 </script>
 </body>
 </html>
