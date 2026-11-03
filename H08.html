@@ -533,8 +533,8 @@
         let currentFilter = 'all';
         let renderedReports = [];   // [CARGO] para retomar por índice
         // [CARGO] Página de captura según tipo de vuelo
-        const PAGE_BY_TYPE = { 'CARGO': 'T07.html' };
-        const DEFAULT_CAPTURE_PAGE = 'T07.html';
+        const PAGE_BY_TYPE = { 'CARGO': 'T08.html' };
+        const DEFAULT_CAPTURE_PAGE = 'T08.html';
         let autoRefreshTimer = null;
         const REFRESH_INTERVAL = 30000;
 
@@ -898,7 +898,7 @@
 
         function goToNewInspection() {
             sessionStorage.removeItem('resumeReport');
-            window.location.href = 'T07.html';
+            window.location.href = 'T08.html';
         }
 
         function logout() {
