@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi Historial - Turnaround Check</title>
+    <title>Mi Historial - Rampa Cargo</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap');
@@ -283,6 +283,7 @@
         .tag-turn { background: rgba(59,130,246,0.15); color: var(--blue); }
         .tag-ron-arrival { background: rgba(16,185,129,0.15); color: var(--green); }
         .tag-ron-departure { background: rgba(245,158,11,0.15); color: var(--yellow); }
+        .tag-cargo { background: rgba(251,146,60,0.15); color: #fb923c; }
 
         .report-meta {
             font-size: 11px; color: var(--muted);
@@ -450,7 +451,7 @@
                     <div class="logo-icon">✈️</div>
                     <div>
                         <div class="logo-text">Flights Report</div>
-                        <div class="logo-sub">Turnaround Check</div>
+                        <div class="logo-sub">Rampa Cargo</div>
                     </div>
                 </div>
                 <div class="header-meta">
@@ -524,11 +525,16 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        const HISTORY_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbys2mnkHmGMRUJmuvb3CY54QCkk7WlVqVkAWF-Ep9flPGS5_J_YDZfe2Xmr2zICUIEJ/exec';
+        // URL /exec del Code.gs de Rampa Cargo (la MISMA que en T07 y login)
+        const HISTORY_SCRIPT_URL = 'PEGAR_AQUI_URL_EXEC';
 
         let currentUser = null;
         let allReports = [];
         let currentFilter = 'all';
+        let renderedReports = [];   // [CARGO] para retomar por índice
+        // [CARGO] Página de captura según tipo de vuelo
+        const PAGE_BY_TYPE = { 'CARGO': 'T07.html' };
+        const DEFAULT_CAPTURE_PAGE = 'T07.html';
         let autoRefreshTimer = null;
         const REFRESH_INTERVAL = 30000;
 
@@ -659,6 +665,7 @@
             }
 
             const sorted = [...filtered].sort((a, b) => parseFlightDate(b) - parseFlightDate(a));
+            renderedReports = sorted;
             list.innerHTML = sorted.map((r, i) => buildCard(r, i)).join('');
         }
 
@@ -742,9 +749,16 @@
                 </table>`
                 : '<div style="color:var(--muted);font-size:12px;padding-top:10px;font-family:\'JetBrains Mono\',monospace;">Sin checkpoints registrados aún.</div>';
 
+            // [CARGO] Fotos guardadas en Drive
+            const photosHtml = (r.photos && r.photos.length) ? `
+                <div style="margin-top:10px;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--muted);">
+                    📸 ${r.photos.length} foto(s) en Drive:
+                    ${r.photos.map((p, i) => `<a href="${p.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#fb923c;margin-left:6px;">${i + 1}</a>`).join('')}
+                </div>` : '';
+
             // Solo mostrar botón "Retomar" si no está Completado
             const resumeBtn = status !== 'Completado' ? `
-                <button class="btn-resume" onclick="resumeReport(event, ${JSON.stringify(r).replace(/"/g, '&quot;')})">
+                <button class="btn-resume" onclick="resumeReport(event, ${idx})">
                     ▶ Retomar Inspección
                 </button>` : '';
 
@@ -789,24 +803,24 @@
                                 <div class="d-value">${airlineDisplay}</div>
                             </div>
                             <div class="detail-item">
-                                <div class="d-label">Tipo de Vuelo</div>
-                                <div class="d-value">${r.flightType || '–'}</div>
+                                <div class="d-label">Vuelo Llegada</div>
+                                <div class="d-value">${r.arrivalFlight || '–'}</div>
                             </div>
                             <div class="detail-item">
-                                <div class="d-label">N° Vuelo</div>
-                                <div class="d-value">${r.flightNumber || '–'}</div>
+                                <div class="d-label">Vuelo Salida</div>
+                                <div class="d-value">${r.departureFlight || '–'}</div>
                             </div>
                             <div class="detail-item">
                                 <div class="d-label">Inspector</div>
                                 <div class="d-value">${r.inspector || currentUser.username}</div>
                             </div>
                             <div class="detail-item">
-                                <div class="d-label">Aeropuerto</div>
-                                <div class="d-value">${r.aeropuerto || '–'}</div>
+                                <div class="d-label">Fotos</div>
+                                <div class="d-value">${r.photoCount || 0}</div>
                             </div>
                             <div class="detail-item">
                                 <div class="d-label">Items</div>
-                                <div class="d-value">${r.itemsCompletados || checkpoints.length} / ${r.itemsTotales || 23}</div>
+                                <div class="d-value">${r.itemsCompletados || checkpoints.length} / ${r.itemsTotales || '–'}</div>
                             </div>
                             <div class="detail-item">
                                 <div class="d-label">Tiempo Total</div>
@@ -818,6 +832,7 @@
                             </div>
                         </div>
                         ${cpHtml}
+                        ${photosHtml}
                         ${incidentHtml}
                         ${resumeBtn}
                     </div>
@@ -828,7 +843,8 @@
             const map = {
                 'TURN': ['tag-turn', 'TURN'],
                 'RON-ARRIVAL': ['tag-ron-arrival', 'ARRIVAL'],
-                'RON-DEPARTURE': ['tag-ron-departure', 'DEPART']
+                'RON-DEPARTURE': ['tag-ron-departure', 'DEPART'],
+                'CARGO': ['tag-cargo', 'CARGO']
             };
             const [cls, label] = map[type] || ['tag-turn', type || '–'];
             return `<span class="flight-type-tag ${cls}">${label}</span>`;
@@ -870,10 +886,14 @@
             renderReports();
         }
 
-        function resumeReport(e, report) {
+        function resumeReport(e, idx) {
             e.stopPropagation();
+            const report = renderedReports[idx];
+            if (!report) return;
+            // Pausar el auto-refresh para que no se re-renderice mientras navega
+            if (autoRefreshTimer) clearInterval(autoRefreshTimer);
             sessionStorage.setItem('resumeReport', JSON.stringify(report));
-            window.location.href = 'T07.html';
+            window.location.href = PAGE_BY_TYPE[report.flightType] || DEFAULT_CAPTURE_PAGE;
         }
 
         function goToNewInspection() {
