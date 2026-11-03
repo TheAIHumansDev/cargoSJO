@@ -13,7 +13,8 @@
 }
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{overflow-x:hidden}
-body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+/* overflow-x solo en html: si body lo tiene, el encabezado "sticky" deja de funcionar */
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:clip}
 button{font-family:inherit}
 #canvas-container{position:fixed;inset:0;z-index:1;pointer-events:none}
 .app-shell{position:relative;z-index:2;min-height:100vh;padding-bottom:96px}
@@ -65,7 +66,7 @@ textarea{width:100%;min-height:80px;padding:12px;background:rgba(30,41,59,.6);bo
 .fs-badge{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,rgba(251,146,60,.25),rgba(245,158,11,.15));border:1px solid rgba(251,146,60,.4);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:var(--orange);font-family:'Courier New',monospace;flex-shrink:0;text-align:center;line-height:1.1}
 .fs-info{flex:1;min-width:0}
 .fs-title{font-weight:700;color:#fff;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.fs-meta{color:var(--soft);font-size:12px;font-family:'Courier New',monospace;margin-top:2px}
+.fs-meta{color:var(--soft);font-size:12px;font-family:'Courier New',monospace;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fs-pct{font-size:24px;font-weight:800;background:linear-gradient(135deg,var(--orange),var(--amber));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 
 /* Board */
@@ -166,14 +167,97 @@ textarea{width:100%;min-height:80px;padding:12px;background:rgba(30,41,59,.6);bo
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.err{background:rgba(239,68,68,.95)}
 
-@media(max-width:600px){
-  .app-header{padding:10px 12px 0}
+/* ── Navegación por secciones (fija bajo el encabezado) ── */
+.phase-nav{display:none;gap:6px;overflow-x:auto;padding:0 0 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+.phase-nav::-webkit-scrollbar{display:none}
+.phase-nav.show{display:flex}
+.pn-chip{flex-shrink:0;scroll-snap-align:start;display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:20px;background:rgba(30,41,59,.6);border:1px solid rgba(251,146,60,.18);color:var(--soft);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.pn-chip b{font-family:'Courier New',monospace;font-size:11px;color:var(--muted);font-weight:700}
+.pn-chip.active{background:rgba(251,146,60,.2);border-color:var(--orange);color:#fff}
+.pn-chip.active b{color:#fdba74}
+.pn-chip.complete{border-color:rgba(16,185,129,.5)}
+.pn-chip.complete b{color:#6ee7b7}
+.phase{scroll-margin-top:calc(var(--hdr,120px) + 8px)}
+.user-chip{display:flex;align-items:center;gap:7px;min-width:0}
+.user-avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--orange),var(--amber));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0}
+.user-text{min-width:0;line-height:1.15}
+.user-text .user-name{display:block;max-width:none}
+.user-text .user-role{display:block;font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.modal-open{overflow:hidden}
+
+/* ── Celular ── */
+@media(max-width:640px){
+  .app-header{padding:calc(8px + env(safe-area-inset-top)) 12px 0}
+  .header-row{margin-bottom:8px}
   .header-title{font-size:16px}
-  .user-name{max-width:70px}
-  .app-content{padding:14px 12px 24px}
-  .grid{grid-template-columns:repeat(2,1fr)}
-  .zone-row{grid-template-columns:repeat(2,1fr)}
-  .card-surface{padding:18px}
+  .header-actions{gap:6px}
+  .user-role-chip{display:none}
+  .user-text .user-name{font-size:12px;max-width:92px}
+  .btn-header-hist{padding:7px 10px;font-size:12px}
+  .btn-header-hist .lbl{display:none}
+  .step-counter{padding:6px 0 8px;font-size:11px}
+  .app-content{padding:12px 12px 24px}
+  .app-shell{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+  .card-surface{padding:18px;border-radius:16px}
+  .question-title{font-size:19px}
+  textarea{font-size:16px}           /* evita zoom automático en iPhone */
+
+  .flight-strip{padding:10px 12px;gap:10px;margin-bottom:14px;border-radius:14px}
+  .fs-badge{width:40px;height:40px;font-size:10px}
+  .fs-title{font-size:14px}
+  .fs-meta{font-size:11px}
+  .fs-pct{font-size:20px}
+
+  .phase{margin-bottom:18px}
+  .phase-head{margin-bottom:8px}
+
+  /* Checkpoints como filas compactas */
+  .grid{grid-template-columns:1fr;gap:8px}
+  .tile{display:grid;grid-template-columns:52px 1fr auto;grid-template-rows:auto auto;column-gap:12px;row-gap:2px;
+        align-items:center;min-height:0;padding:8px 12px 8px 8px;border-width:1.5px;border-radius:12px}
+  .tile::after{content:'📷';grid-column:3;grid-row:1/3;font-size:18px;opacity:.55}
+  .tile.st-ok::after{content:'✓';color:var(--green);font-weight:800;opacity:1}
+  .tile.st-error::after{content:'↻';color:#fca5a5;font-weight:800;opacity:1}
+  .tile.st-sending::after{content:'⏳';opacity:1}
+  .tile-thumb{grid-row:1/3;grid-column:1;width:52px;height:52px;aspect-ratio:auto;font-size:22px;border-radius:9px}
+  .tile-name{grid-column:2;grid-row:1;font-size:14px;align-self:end}
+  .tile-meta{grid-column:2;grid-row:2;align-self:start;font-size:11px}
+  .count-badge{display:none}               /* en móvil el conteo va en la línea de estado */
+
+  /* Zonas: 4 en una fila, compactas */
+  .tile-wide{display:block;padding:10px}
+  .tile-wide::after{content:none}
+  .tile-wide .tile-name{font-size:14px;margin-bottom:8px}
+  .tile-wide .hint{display:none}
+  .zone-row{grid-template-columns:repeat(4,1fr);gap:6px}
+  .zone-btn{padding:5px 3px 6px;gap:3px;border-width:1.5px;border-radius:10px;min-width:0}
+  .zone-btn .z-thumb{aspect-ratio:1/1;font-size:18px;border-radius:7px}
+  .zone-btn .z-label{font-size:10px;line-height:1.15;min-height:2.3em;display:flex;align-items:center;justify-content:center}
+  .zone-btn .z-label .full{display:none}
+  .zone-btn .z-meta{font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  .bottom-bar{padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+  .btn-incident,.btn-finish{padding:13px 8px;font-size:14px}
+
+  .sheet{padding:14px 14px calc(16px + env(safe-area-inset-bottom));max-height:92dvh}
+  .camera-container{max-height:48dvh}
+  .capture-btn{padding:15px}
+  .radio-option{min-width:0;padding:11px 6px}
+  .photo-selector{grid-template-columns:repeat(3,1fr)}
+  .photo-gallery{grid-template-columns:repeat(2,1fr)}
+  .toast{bottom:calc(86px + env(safe-area-inset-bottom))}
+}
+@media(min-width:641px){
+  .zone-btn .z-label .short{display:none}
+  .zone-btn .z-thumb{aspect-ratio:auto;height:96px}   /* zonas más bajas en pantalla grande */
+}
+.user-role-chip{display:none}                           /* el rol ya se muestra bajo el nombre */
+.count-badge{z-index:2}
+@media(max-width:360px){
+  .header-title{font-size:15px}
+  .user-text .user-name{max-width:70px}
+  .tile{grid-template-columns:46px 1fr auto}
+  .tile-thumb{width:46px;height:46px}
 }
 </style>
 </head>
@@ -185,13 +269,17 @@ textarea{width:100%;min-height:80px;padding:12px;background:rgba(30,41,59,.6);bo
     <div class="header-row">
       <span class="header-title">📦 Rampa Cargo</span>
       <div class="header-actions">
-        <span class="user-name" id="usernameDisplay">Cargando…</span>
-        <button class="btn-header-hist" onclick="goToHistory()">📋 Historial</button>
+        <div class="user-chip">
+          <div class="user-avatar" id="userAvatar">?</div>
+          <div class="user-text"><span class="user-name" id="usernameDisplay">Cargando…</span><span class="user-role" id="userRoleSmall"></span></div>
+        </div>
+        <button class="btn-header-hist" onclick="goToHistory()" aria-label="Historial">📋<span class="lbl"> Historial</span></button>
         <span class="user-role-chip" id="userRole">…</span>
       </div>
     </div>
     <div class="progress-bar"><div class="progress-fill" id="progressBar"></div></div>
     <div class="step-counter"><span id="stepCounter">Nueva inspección</span><span id="syncPill"></span></div>
+    <nav class="phase-nav" id="phaseNav" aria-label="Secciones"></nav>
   </header>
 
   <main class="app-content">
@@ -227,12 +315,12 @@ textarea{width:100%;min-height:80px;padding:12px;background:rgba(30,41,59,.6);bo
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div class="form-group">
-            <label for="arrivalFlight">✈️⬇ Vuelo de llegada</label>
-            <input type="text" id="arrivalFlight" placeholder="Ej: 1234" autocomplete="off" autocapitalize="characters">
+            <label for="arrivalFlight" style="white-space:nowrap;">🛬 Llegada</label>
+            <input type="text" id="arrivalFlight" placeholder="N° vuelo" autocomplete="off" autocapitalize="characters" inputmode="text" enterkeyhint="next">
           </div>
           <div class="form-group">
-            <label for="departureFlight">✈️⬆ Vuelo de salida</label>
-            <input type="text" id="departureFlight" placeholder="Ej: 1235" autocomplete="off" autocapitalize="characters">
+            <label for="departureFlight" style="white-space:nowrap;">🛫 Salida</label>
+            <input type="text" id="departureFlight" placeholder="N° vuelo" autocomplete="off" autocapitalize="characters" inputmode="text" enterkeyhint="go">
           </div>
         </div>
         <button class="btn-primary" onclick="startNewInspection()">Iniciar inspección →</button>
@@ -383,6 +471,8 @@ let inspectionUser = { username: '', role: 'Inspector' };
     inspectionUser = { username: u.username, role: u.role };
     document.getElementById('usernameDisplay').textContent = u.username;
     document.getElementById('userRole').textContent = u.role;
+    document.getElementById('userRoleSmall').textContent = u.role;
+    document.getElementById('userAvatar').textContent = String(u.username || '?').slice(0, 2).toUpperCase();
   } catch (e) { alert('Sesión inválida. Inicie sesión nuevamente.'); location.href = LOGIN_PAGE; }
 })();
 
@@ -408,10 +498,10 @@ const BRIEFING_TOPICS = [
 ];
 
 const ZONES = [
-  { id:'lower_rear', label:'Lower Trasero',   emoji:'🔻' },
-  { id:'main_deck',  label:'Main Deck',       emoji:'✈️' },
-  { id:'lower_fwd',  label:'Lower Delantero', emoji:'🔺' },
-  { id:'bulk',       label:'Bulk',            emoji:'📦' },
+  { id:'lower_rear', label:'Lower Trasero',   short:'Lower Tras.', emoji:'🔻' },
+  { id:'main_deck',  label:'Main Deck',       short:'Main Deck',   emoji:'✈️' },
+  { id:'lower_fwd',  label:'Lower Delantero', short:'Lower Del.',  emoji:'🔺' },
+  { id:'bulk',       label:'Bulk',            short:'Bulk',        emoji:'📦' },
 ];
 
 const PHASES = [
@@ -633,7 +723,9 @@ function record(label, { ts, full, thumb, photoIndex, extra }) {
 function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
   document.getElementById('bottomBar').classList.toggle('show', id === 'screenBoard');
+  document.getElementById('phaseNav').classList.toggle('show', id === 'screenBoard');
   window.scrollTo(0, 0);
+  updateHeaderHeight();
 }
 
 function startNewInspection() {
@@ -737,25 +829,82 @@ function renderBoard() {
     const cps = CHECKPOINTS.filter(c => c.phase === ph.id);
     const labels = cps.flatMap(cp => cp.type === 'zones' ? ZONES.map(z => zoneItem(cp, z)) : [cp.label]);
     const done = labels.filter(isDone).length;
-    return `<div class="phase">
+    return `<section class="phase" id="ph-${ph.id}" data-ph="${ph.id}">
         <div class="phase-head"><span class="phase-title">${ph.title}</span><span class="phase-count">${done}/${labels.length}</span></div>
         <div class="grid">${cps.map(tileHtml).join('')}</div>
-      </div>`;
+      </section>`;
   }).join('');
   renderHeader();
+  renderPhaseNav();
 }
+
+// ── Barra de secciones: salta a cada fase y marca la visible ──
+function phaseProgress(ph) {
+  const labels = CHECKPOINTS.filter(c => c.phase === ph.id)
+    .flatMap(cp => cp.type === 'zones' ? ZONES.map(z => zoneItem(cp, z)) : [cp.label]);
+  return { done: labels.filter(isDone).length, total: labels.length };
+}
+let activePhase = PHASES[0].id;
+function renderPhaseNav() {
+  const nav = document.getElementById('phaseNav');
+  const keepLeft = nav.scrollLeft;
+  nav.innerHTML = PHASES.map(ph => {
+    const { done, total } = phaseProgress(ph);
+    const cls = (ph.id === activePhase ? ' active' : '') + (done === total ? ' complete' : '');
+    return `<button class="pn-chip${cls}" data-ph="${ph.id}" onclick="goPhase('${ph.id}')">${ph.title} <b>${done}/${total}</b></button>`;
+  }).join('');
+  nav.scrollLeft = keepLeft;               // no "salta" al re-renderizar
+  updateHeaderHeight();
+}
+let jumpLockUntil = 0;
+function goPhase(id) {
+  const el = document.getElementById('ph-' + id);
+  if (!el) return;
+  activePhase = id; markActiveChip(true);
+  jumpLockUntil = Date.now() + 700;      // que el scroll no cambie el chip mientras salta
+  const hdr = document.querySelector('.app-header').offsetHeight;
+  window.scrollTo({ top: Math.max(0, el.getBoundingClientRect().top + window.scrollY - hdr - 8), behavior: 'smooth' });
+}
+function markActiveChip(scrollChip) {
+  const nav = document.getElementById('phaseNav');
+  nav.querySelectorAll('.pn-chip').forEach(c => {
+    const on = c.dataset.ph === activePhase;
+    c.classList.toggle('active', on);
+    // Solo desplaza la barra de chips (horizontal), nunca la página
+    if (on && scrollChip) nav.scrollTo({ left: c.offsetLeft - (nav.clientWidth - c.offsetWidth) / 2, behavior: 'smooth' });
+  });
+}
+function updateHeaderHeight() {
+  const h = document.querySelector('.app-header').offsetHeight;
+  document.documentElement.style.setProperty('--hdr', h + 'px');
+}
+let scrollTick = false;
+window.addEventListener('scroll', () => {
+  if (scrollTick || Date.now() < jumpLockUntil || !document.getElementById('screenBoard').classList.contains('active')) return;
+  scrollTick = true;
+  requestAnimationFrame(() => {
+    scrollTick = false;
+    const limit = (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--hdr')) || 120) + 24;
+    let cur = PHASES[0].id;
+    document.querySelectorAll('.phase').forEach(sec => { if (sec.getBoundingClientRect().top <= limit) cur = sec.dataset.ph; });
+    // Al llegar al final, activar la última sección
+    if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) cur = PHASES[PHASES.length - 1].id;
+    if (cur !== activePhase) { activePhase = cur; markActiveChip(true); }
+  });
+}, { passive: true });
+window.addEventListener('resize', updateHeaderHeight);
 
 function tileHtml(cp) {
   if (cp.type === 'zones') {
     const zDone = ZONES.filter(z => isDone(zoneItem(cp, z))).length;
     return `<div class="tile tile-wide">
-        <div class="tile-name">${cp.emoji} ${cp.label} <span style="color:var(--muted);font-weight:500;font-size:11px;">· ${zDone}/4 zonas · toque las zonas operadas</span></div>
+        <div class="tile-name">${cp.emoji} ${cp.label} <span style="color:var(--muted);font-weight:500;font-size:11px;">· ${zDone}/4<span class="hint"> zonas · toque las zonas operadas</span></span></div>
         <div class="zone-row">${ZONES.map(z => {
           const lbl = zoneItem(cp, z), st = itemStatus(lbl), th = lastThumb(lbl);
           return `<button class="zone-btn st-${st}" onclick="onZone('${cp.key}','${z.id}')">
               <div class="z-thumb">${th ? `<img src="${th}" alt="" onerror="this.replaceWith('☁️')">` : (st !== 'pending' ? '☁️' : z.emoji)}</div>
-              <div class="z-label">${z.label}</div>
-              <div class="z-meta">${statusText(st, S.items[lbl]?.ts)}</div>
+              <div class="z-label"><span class="full">${z.label}</span><span class="short">${z.short}</span></div>
+              <div class="z-meta">${st === 'ok' ? fmtShort(S.items[lbl]?.ts) : st === 'pending' ? '—' : statusText(st)}</div>
             </button>`;
         }).join('')}</div>
       </div>`;
@@ -763,7 +912,8 @@ function tileHtml(cp) {
   const st = itemStatus(cp.label), th = lastThumb(cp.label), n = photoCount(cp.label);
   const thumb = th ? `<img src="${th}" alt="" onerror="this.replaceWith('☁️')">` : (st !== 'pending' && cp.type !== 'briefing' ? '☁️' : cp.emoji);
   const badge = cp.type === 'multi' && n ? `<span class="count-badge">${n} 📷</span>` : '';
-  const brief = cp.type === 'briefing' && st !== 'pending' && S.briefing.topics.length ? ` · ${S.briefing.topics.length} temas` : '';
+  const brief = cp.type === 'briefing' && st !== 'pending' && S.briefing.topics.length ? ` · ${S.briefing.topics.length} temas`
+              : cp.type === 'multi' && n ? ` · ${n} foto${n !== 1 ? 's' : ''}` : '';
   return `<button class="tile st-${st}" onclick="onTile('${cp.key}')">
       ${badge}
       <div class="tile-thumb">${thumb}</div>
@@ -779,8 +929,8 @@ function renderHeader() {
   document.getElementById('progressBar').style.width = pct + '%';
   document.getElementById('stepCounter').textContent = `${done} de ${total} items`;
   document.getElementById('fsBadge').textContent = S.airline;
-  document.getElementById('fsTitle').textContent = `${S.airlineName} · ⬇${S.arrivalFlight} ⬆${S.departureFlight || '–'}`;
-  document.getElementById('fsMeta').textContent = `Inicio ${fmtShort(S.flightTimestamp)} · ${CARGO_ITEMS.reduce((a, l) => a + photoCount(l), 0)} fotos`;
+  document.getElementById('fsTitle').textContent = `🛬 ${S.arrivalFlight}  →  🛫 ${S.departureFlight || '–'}`;
+  document.getElementById('fsMeta').textContent = `${S.airlineName} · inicio ${fmtShort(S.flightTimestamp)} · ${CARGO_ITEMS.reduce((a, l) => a + photoCount(l), 0)} fotos`;
   document.getElementById('fsPct').textContent = pct + '%';
   document.getElementById('incCount').textContent = S.incidents.length ? `(${S.incidents.length})` : '';
 }
@@ -820,8 +970,11 @@ function onZone(cpKey, zoneId) {
 // ═════════════════════════════════════════════════════════════════════════════
 let camCtx = null, camStream = null, camTsTimer = null, camPending = null;
 
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openModal(id) { document.getElementById(id).classList.add('open'); document.body.classList.add('modal-open'); }
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  if (!document.querySelector('.modal.open')) document.body.classList.remove('modal-open');
+}
 
 async function openCamera(ctx) {
   camCtx = ctx; camPending = null;
@@ -906,6 +1059,9 @@ function capturePhoto() {
   document.getElementById('camPreview').src = camPending.full;
   setCamMode('preview');
 }
+
+document.getElementById('arrivalFlight').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('departureFlight').focus(); });
+document.getElementById('departureFlight').addEventListener('keydown', e => { if (e.key === 'Enter') startNewInspection(); });
 
 document.getElementById('camFile').addEventListener('change', e => {
   const f = e.target.files && e.target.files[0]; e.target.value = '';
