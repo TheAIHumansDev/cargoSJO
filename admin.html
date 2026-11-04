@@ -468,6 +468,8 @@ body.locked{overflow:hidden}
 // ═════════════════════════════════════════════════════════════════════════════
 const API_URL = 'https://script.google.com/macros/s/AKfycbx0MXrQ100pbi0TrQlWI9d2sdVsgUGOto5qWEDIB5pvqkNzs1mDcSwbmUoeRdXFMHoi1Q/exec';   // URL /exec del Apps Script del Sheet ESPEJO
 const TZ = 'America/Costa_Rica';
+// Login desactivado por ahora. Para reactivarlo: true aquí y REQUIRE_LOGIN = true en el Code.gs del espejo.
+const REQUIRE_LOGIN = false;
 
 // Umbrales de alertas — VALORES INICIALES: ajústalos con operaciones / SMS
 const CONFIG = {
@@ -526,7 +528,7 @@ function api(action, params = {}, timeout = 45000) {
     const t = setTimeout(() => { done(); reject(new Error('Tiempo de espera agotado')); }, timeout);
     window[cb] = res => {
       done();
-      if (res && res.auth) { showLogin('Tu sesión expiró. Inicia sesión de nuevo.'); return reject(new Error(res.message)); }
+      if (res && res.auth && REQUIRE_LOGIN) { showLogin('Tu sesión expiró. Inicia sesión de nuevo.'); return reject(new Error(res.message)); }
       res && res.success ? resolve(res) : reject(new Error((res && res.message) || 'Error del servidor'));
     };
     sc.onerror = () => { done(); reject(new Error('No se pudo conectar con el servidor')); };
@@ -562,6 +564,11 @@ function logout() {
 }
 function startApp() {
   $('login').classList.add('hide');
+  if (!REQUIRE_LOGIN) {
+    let nm = ''; try { nm = localStorage.getItem('cargoDashName') || ''; } catch (e) {}
+    session = { token: '', username: nm || 'Supervisión', role: 'Acceso sin login' };
+    document.querySelector('.btn-out').style.display = 'none';
+  }
   $('unm').textContent = session.username; $('url').textContent = session.role;
   $('uav').textContent = String(session.username).slice(0, 2).toUpperCase();
   loadData();
@@ -1082,6 +1089,7 @@ function openSms(id) {
           <div><label for="smE">Estado</label><select id="smE">${META.smsStates.map(x => `<option ${x === s.estado ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
           <div><label for="smR">Responsable</label><input id="smR" value="${esc(s.responsable)}" placeholder="Quién da seguimiento"></div>
         </div>
+        ${REQUIRE_LOGIN ? '' : `<div><label for="smP">Tu nombre (queda en "Actualizado por")</label><input id="smP" required value="${esc(session.username === 'Supervisión' ? '' : session.username)}" placeholder="Nombre de quien actualiza"></div>`}
         <div><label for="smA">Acción correctiva</label><textarea id="smA" placeholder="Medida tomada o planificada">${esc(s.accion)}</textarea></div>
         <div><label for="smN">Notas de seguimiento</label><textarea id="smN" placeholder="Investigación, causa raíz, verificación de eficacia…">${esc(s.notas)}</textarea></div>
         <button class="btn-p" id="smBtn" type="submit">💾 Guardar seguimiento</button>
@@ -1093,6 +1101,11 @@ async function saveSms(e, id) {
   e.preventDefault();
   const b = $('smBtn'); b.disabled = true; b.textContent = 'Guardando…';
   const p = { id, estado: $('smE').value, responsable: $('smR').value.trim(), accion: $('smA').value.trim(), notas: $('smN').value.trim() };
+  if (!REQUIRE_LOGIN) {
+    p.por = $('smP').value.trim();
+    try { localStorage.setItem('cargoDashName', p.por); } catch (e2) {}
+    session.username = p.por; $('unm').textContent = p.por; $('uav').textContent = p.por.slice(0, 2).toUpperCase();
+  }
   try {
     await api('updateSms', p);
     const s = SMS.find(x => x.id === id);
@@ -1147,6 +1160,10 @@ let toastT;
 function toast(m, err) { const t = $('toast'); t.textContent = m; t.className = 'toast show' + (err ? ' err' : ''); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 3200); }
 
 (function boot() {
+  if (!REQUIRE_LOGIN) {
+    if (!/^https:\/\/script\.google\.com\//.test(API_URL)) toast('Configuración pendiente: pegue la URL /exec del espejo en API_URL.', true);
+    startApp(); return;
+  }
   if (!/^https:\/\/script\.google\.com\//.test(API_URL)) { $('lerr').textContent = 'Configuración pendiente: pegue la URL /exec del espejo en API_URL.'; }
   try { const s = JSON.parse(sessionStorage.getItem('cargoDash') || 'null'); if (s && s.token) { session = s; startApp(); return; } } catch (e) {}
   $('lu').focus();
