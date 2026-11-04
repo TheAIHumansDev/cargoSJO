@@ -1,323 +1,1173 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flights Report - Login</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;700;800&display=swap');
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Rampa Cargo · Control Tower</title>
+<meta name="theme-color" content="#050816">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Syne:wght@500;600;700;800&display=swap');
+:root{
+  --orange:#fb923c;--amber:#f59e0b;--blue:#3b82f6;--purple:#8b5cf6;--green:#10b981;--yellow:#f59e0b;--red:#ef4444;--cyan:#06b6d4;
+  --bg:#050816;--surface:rgba(15,23,42,.86);--surface2:rgba(20,30,58,.7);
+  --border:rgba(251,146,60,.2);--border2:rgba(148,163,184,.12);--text:#e2e8f0;--soft:#94a3b8;--muted:#64748b;
+  /* series (validadas sobre #0f172a) y estados */
+  --s1:#d95926;--s2:#3987e5;--s3:#199e70;--s4:#c98500;
+  --good:#0ca30c;--warning:#fab219;--critical:#d03b3b;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{overflow-x:hidden}
+body{font-family:'Syne',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:clip;
+  background-image:radial-gradient(1200px 600px at 90% -10%,rgba(251,146,60,.10),transparent 60%),radial-gradient(900px 500px at -10% 30%,rgba(59,130,246,.08),transparent 60%);background-attachment:fixed}
+button,input,select,textarea{font-family:inherit}
+.app{max-width:1280px;margin:0 auto;padding:0 16px 40px}
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+/* HEADER */
+.header{position:sticky;top:0;z-index:50;margin:0 -16px;padding:calc(12px + env(safe-area-inset-top)) 16px 10px;background:rgba(5,8,22,.85);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border-bottom:1px solid var(--border)}
+.h-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--orange),var(--red));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;box-shadow:0 4px 18px rgba(251,146,60,.3)}
+.brand-t{font-size:17px;font-weight:800;line-height:1.1;background:linear-gradient(135deg,var(--orange),var(--amber));-webkit-background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap}
+.brand-s{font-size:9px;color:var(--muted);font-family:var(--mono);letter-spacing:2px;text-transform:uppercase;white-space:nowrap}
+.h-right{display:flex;align-items:center;gap:8px;min-width:0}
+.live{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--green);font-family:var(--mono)}
+.live i{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.5s infinite}
+@keyframes pulse{50%{opacity:.4;transform:scale(.7)}}
+.user{display:flex;align-items:center;gap:7px;min-width:0}
+.user .av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--orange),var(--amber));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0}
+.user .nm{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
+.user .rl{font-size:9px;color:var(--muted);font-family:var(--mono);white-space:nowrap}
+.btn-out{padding:6px 12px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;color:#fca5a5;font-size:11px;font-weight:700;cursor:pointer}
 
-        body {
-            font-family: 'Syne', sans-serif;
-            background: #050816;
-            overflow: hidden;
-        }
+.fbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.flabel{font-size:11px;color:var(--muted);flex-shrink:0}
+.pills{display:flex;gap:5px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.pills::-webkit-scrollbar{display:none}
+.pill{padding:6px 12px;background:rgba(30,41,59,.5);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;white-space:nowrap;font-family:var(--mono)}
+.pill.on{background:rgba(251,146,60,.16);border-color:var(--orange);color:#fdba74}
+.dinput,.fsel{padding:6px 12px;background:rgba(30,41,59,.5);border:1px solid var(--border2);border-radius:20px;font-size:11px;color:var(--text);outline:none;font-family:var(--mono);max-width:100%}
+.fsel{padding-right:26px;appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 14px) 52%,calc(100% - 9px) 52%;background-size:5px 5px;background-repeat:no-repeat}
+.fsel option{background:#0f172a}
+.fsel.has{border-color:var(--orange);color:#fdba74}
+.dinput::-webkit-calendar-picker-indicator{filter:invert(.6)}
+.rbtn{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;background:rgba(251,146,60,.12);border:1px solid var(--border);border-radius:20px;color:#fdba74;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--mono)}
+.rbtn.spin .ic{animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.upd{font-size:9px;color:var(--muted);font-family:var(--mono);white-space:nowrap}
+.fbar2{margin-top:8px;padding-top:8px;border-top:1px solid var(--border2)}
+.clear{padding:6px 11px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:20px;color:#fca5a5;font-size:10px;font-weight:700;cursor:pointer;display:none;font-family:var(--mono)}
+.clear.show{display:inline-block}
+.f-toggle{display:none}
 
-        #canvas-container {
-            position: fixed; top: 0; left: 0;
-            width: 100%; height: 100%; z-index: 1;
-        }
+/* KPIs */
+.main{padding-top:16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:13px 15px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;inset:0 0 auto 0;height:2px;background:var(--c,var(--orange))}
+.kpi-l{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1.8px;color:var(--muted);font-family:var(--mono);margin-bottom:6px}
+.kpi-v{font-size:28px;font-weight:800;line-height:1;margin-bottom:4px;color:#fff;font-variant-numeric:tabular-nums}
+.kpi-v small{font-size:13px;color:var(--soft);font-weight:600;margin-left:3px}
+.kpi-s{font-size:10px;color:var(--muted);font-family:var(--mono)}
 
-        .login-container {
-            position: relative; z-index: 2;
-            display: flex; justify-content: center; align-items: center;
-            min-height: 100vh; padding: 20px;
-        }
+/* TABS */
+.tabs{display:flex;gap:4px;margin-bottom:16px;background:rgba(15,23,42,.55);border:1px solid var(--border2);border-radius:14px;padding:4px;overflow-x:auto;scrollbar-width:none;position:sticky;top:var(--hdr,150px);z-index:40;backdrop-filter:blur(16px)}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1;min-width:110px;padding:10px 12px;background:transparent;border:none;border-radius:10px;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap}
+.tab.on{background:rgba(251,146,60,.15);color:#fff;box-shadow:inset 0 0 0 1px var(--border)}
+.badge{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;font-family:var(--mono);background:rgba(148,163,184,.15);color:var(--soft)}
+.badge.alert{background:rgba(239,68,68,.2);color:#fca5a5}
+.panel{display:none}.panel.on{display:block;animation:fade .25s}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}}
 
-        .login-box {
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(24px);
-            border: 1px solid rgba(59, 130, 246, 0.3);
-            border-radius: 24px;
-            padding: 48px 40px;
-            width: 100%; max-width: 420px;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6),
-                        0 0 80px rgba(59,130,246,0.08);
-            animation: slideIn 0.6s ease-out;
-        }
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.tt{font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px}
+.cnt{padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700;background:rgba(251,146,60,.15);color:#fdba74;font-family:var(--mono)}
+.search{padding:7px 12px;background:rgba(30,41,59,.5);border:1px solid var(--border2);border-radius:20px;color:var(--text);font-size:12px;outline:none;min-width:180px;font-family:var(--mono)}
 
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+/* TABLE (escritorio) / TARJETAS (móvil) */
+.tbl{background:var(--surface);border:1px solid var(--border2);border-radius:16px;overflow:hidden}
+.tr{display:grid;grid-template-columns:var(--cols);gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid rgba(30,41,59,.7)}
+.tr:last-child{border-bottom:none}
+.th{background:rgba(15,23,42,.97);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--muted);font-family:var(--mono);position:sticky;top:0}
+.tb .tr{cursor:pointer;transition:background .15s}
+.tb .tr:hover{background:rgba(251,146,60,.05)}
+.td{font-size:12px;font-family:var(--mono);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.td b{font-family:'Syne',sans-serif;font-size:13px;color:#fff}
+.td .sub{display:block;font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis}
+.al-badge{display:inline-flex;align-items:center;justify-content:center;min-width:40px;height:24px;padding:0 6px;border-radius:7px;background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.3);color:#fdba74;font-weight:800;font-size:10px;margin-right:8px;vertical-align:middle}
+.bar{height:6px;background:rgba(148,163,184,.15);border-radius:4px;overflow:hidden;width:100%;max-width:120px}
+.bar i{display:block;height:100%;border-radius:4px;background:var(--s1)}
+.bar i.full{background:var(--good)}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;font-family:var(--mono);white-space:nowrap}
+.c-ok{background:rgba(12,163,12,.14);color:#6ee7b7;border:1px solid rgba(12,163,12,.35)}
+.c-run{background:rgba(250,178,25,.12);color:#fcd34d;border:1px solid rgba(250,178,25,.3)}
+.c-crit{background:rgba(208,59,59,.15);color:#fca5a5;border:1px solid rgba(208,59,59,.4)}
+.c-warn{background:rgba(250,178,25,.12);color:#fcd34d;border:1px solid rgba(250,178,25,.3)}
+.c-good{background:rgba(12,163,12,.14);color:#86efac;border:1px solid rgba(12,163,12,.35)}
+.c-mute{background:rgba(148,163,184,.12);color:var(--soft);border:1px solid rgba(148,163,184,.25)}
+.c-blue{background:rgba(57,135,229,.14);color:#93c5fd;border:1px solid rgba(57,135,229,.35)}
+.empty{text-align:center;padding:46px 16px;color:var(--muted);font-size:13px}
+.more{display:block;width:100%;padding:12px;background:transparent;border:none;border-top:1px solid var(--border2);color:#fdba74;font-weight:700;cursor:pointer;font-family:var(--mono);font-size:12px}
 
-        .logo { text-align: center; margin-bottom: 40px; }
+/* ALERTAS */
+.asum{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.ascard{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:14px;text-align:center;cursor:pointer}
+.ascard.on{box-shadow:inset 0 0 0 1px var(--orange)}
+.ascard .n{font-size:30px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.ascard .l{font-size:10px;font-weight:700;letter-spacing:1.5px;font-family:var(--mono);margin-top:5px;color:var(--soft)}
+.ascard.crit .n{color:#f87171}.ascard.warn .n{color:#fcd34d}.ascard.info .n{color:#93c5fd}
+.alist{display:grid;gap:8px}
+.acard{display:grid;grid-template-columns:42px 1fr auto;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--border2);border-left:3px solid var(--lc);border-radius:14px;padding:12px 14px;cursor:pointer}
+.acard.critical{--lc:var(--critical)}.acard.warning{--lc:var(--warning)}.acard.info{--lc:var(--s2)}
+.a-ic{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:19px;background:rgba(148,163,184,.1)}
+.a-t{font-size:13px;font-weight:800;margin-bottom:3px}
+.a-d{font-size:12px;color:var(--soft);line-height:1.45}
+.a-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.a-v{text-align:right;font-family:var(--mono)}
+.a-v b{display:block;font-size:20px;color:#fff}
+.a-v span{font-size:9px;color:var(--muted)}
 
-        .logo-icon {
-            font-size: 48px; margin-bottom: 12px;
-            display: block;
-            animation: float 3s ease-in-out infinite;
-        }
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-8px); }
-        }
+/* ANALÍTICA */
+.sec{font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#fdba74;font-family:var(--mono);margin:22px 2px 10px}
+.sec:first-child{margin-top:4px}
+.grid{display:grid;gap:12px;margin-bottom:12px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g12{grid-template-columns:1fr 1.6fr}
+.card{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:16px;min-width:0}
+.card h3{font-size:13px;font-weight:800;margin-bottom:4px}
+.card .cap{font-size:11px;color:var(--muted);margin-bottom:12px;font-family:var(--mono)}
+.cw{position:relative;height:240px}
+.cw.tall{height:var(--h,520px)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;font-size:11px;color:var(--soft);font-family:var(--mono)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.shifts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.shift{background:rgba(30,41,59,.45);border:1px solid var(--border2);border-radius:12px;padding:12px;text-align:center}
+.shift .e{font-size:20px}.shift .n{font-size:26px;font-weight:800;color:#fff;margin:4px 0 2px;font-variant-numeric:tabular-nums}
+.shift .l{font-size:10px;color:var(--soft);font-family:var(--mono)}
+.hbars{display:grid;gap:9px}
+.hb{display:grid;grid-template-columns:minmax(90px,150px) 1fr minmax(64px,auto);gap:10px;align-items:center;font-size:12px}
+.hb .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
+.hb .tr2{height:10px;background:rgba(148,163,184,.12);border-radius:4px;overflow:hidden}
+.hb .tr2 i{display:block;height:100%;background:var(--s1);border-radius:0 4px 4px 0}
+.hb .v{text-align:right;font-family:var(--mono);color:var(--soft);font-variant-numeric:tabular-nums;white-space:nowrap}
+.rank{width:100%;border-collapse:collapse;font-size:12px}
+.rank th{text-align:left;font-size:9px;letter-spacing:1.3px;text-transform:uppercase;color:var(--muted);font-family:var(--mono);padding:6px 8px;border-bottom:1px solid var(--border2);cursor:pointer;white-space:nowrap}
+.rank td{padding:8px;border-bottom:1px solid rgba(30,41,59,.6);font-family:var(--mono);white-space:nowrap}
+.rank td:first-child{font-family:'Syne',sans-serif;font-weight:700}
+.rank tr:last-child td{border-bottom:none}
+.tscroll{overflow-x:auto}
 
-        .logo h1 {
-            font-size: 30px; font-weight: 800;
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            margin-bottom: 6px;
-        }
+/* MODAL */
+.modal{position:fixed;inset:0;z-index:100;background:rgba(2,6,23,.78);backdrop-filter:blur(4px);display:none;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto}
+.modal.open{display:flex}
+body.locked{overflow:hidden}
+.mbox{width:100%;max-width:980px;background:#0b1024;border:1px solid var(--border);border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,.6);animation:fade .2s}
+.mh{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px;border-bottom:1px solid var(--border2);position:sticky;top:0;background:#0b1024;border-radius:20px 20px 0 0;z-index:2}
+.mh-id{display:flex;align-items:center;gap:12px;min-width:0}
+.mh-t{font-size:18px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mh-s{font-size:11px;color:var(--muted);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.x{width:36px;height:36px;border-radius:50%;background:rgba(71,85,105,.35);border:none;color:#cbd5e1;font-size:16px;cursor:pointer;flex-shrink:0}
+.mb{padding:16px 18px 20px;display:grid;gap:18px;grid-template-columns:minmax(0,1fr)}
+.mb>*{min-width:0}
+.mkpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.mk{background:rgba(30,41,59,.45);border:1px solid var(--border2);border-radius:12px;padding:10px 12px}
+.mk .l{font-size:9px;color:var(--muted);font-family:var(--mono);letter-spacing:1.3px;text-transform:uppercase}
+.mk .v{font-size:19px;font-weight:800;margin-top:3px;font-variant-numeric:tabular-nums}
+.mk .v small{font-size:11px;color:var(--soft)}
+.stitle{font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:#fdba74;font-family:var(--mono);margin-bottom:8px}
+.tl{display:grid;gap:6px}
+.tl-ph{font-size:11px;font-weight:800;color:var(--soft);margin:8px 0 2px}
+.tl-row{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:10px;align-items:start;padding:8px 10px;border-radius:10px;background:rgba(30,41,59,.35);border:1px solid transparent}
+.tl-row.miss{border-color:rgba(208,59,59,.35);background:rgba(208,59,59,.06)}
+.tl-row .dot{width:10px;height:10px;border-radius:50%;margin-top:4px;background:var(--good)}
+.tl-row.miss .dot{background:var(--critical)}.tl-row.opt .dot{background:var(--muted)}
+.tl-n{font-size:13px;font-weight:700}
+.tl-m{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px}
+.tl-t{font-family:var(--mono);font-size:12px;text-align:right;white-space:nowrap}
+.tl-t small{display:block;color:var(--muted);font-size:10px}
+.thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.thumbs img{width:64px;height:48px;object-fit:cover;border-radius:7px;border:1px solid var(--border2);cursor:zoom-in;background:#111827}
+.ztbl{width:100%;border-collapse:collapse;font-size:12px;font-family:var(--mono)}
+.ztbl th{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;text-align:left;padding:6px;border-bottom:1px solid var(--border2);white-space:nowrap}
+.ztbl td{padding:7px 6px;border-bottom:1px solid rgba(30,41,59,.6);white-space:nowrap}
+.ztbl td:first-child{font-family:'Syne',sans-serif;font-weight:700}
+.na{color:#475569}
+.form{display:grid;gap:12px}
+.form label{display:block;font-size:11px;color:var(--soft);margin-bottom:5px;font-weight:600}
+.form select,.form input,.form textarea{width:100%;padding:11px 12px;background:rgba(30,41,59,.6);border:1px solid var(--border2);border-radius:10px;color:#fff;font-size:15px;outline:none}
+.form textarea{min-height:80px;resize:vertical}
+.form .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-p{padding:13px;background:linear-gradient(135deg,var(--orange),var(--amber));border:none;border-radius:12px;color:#fff;font-weight:800;font-size:14px;cursor:pointer}
+.btn-p:disabled{opacity:.5}
+.desc{background:rgba(30,41,59,.45);border:1px solid var(--border2);border-radius:12px;padding:12px;font-size:13px;line-height:1.55;white-space:pre-wrap}
+.lb{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;padding:16px}
+.lb.open{display:flex}
+.lb img{max-width:100%;max-height:80vh;border-radius:10px;object-fit:contain}
+.lb .cap2{color:#cbd5e1;font-family:var(--mono);font-size:12px;text-align:center}
+.lb a{color:#fdba74;font-size:12px;font-family:var(--mono)}
+.lb .nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.12);color:#fff;font-size:20px;cursor:pointer}
+.lb .prev{left:12px}.lb .next{right:12px}.lb .x{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px}
 
-        .logo p {
-            color: #64748b; font-size: 11px;
-            font-family: 'JetBrains Mono', monospace;
-            letter-spacing: 3px; text-transform: uppercase;
-        }
+/* LOGIN */
+.login{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg);background-image:radial-gradient(800px 500px at 80% 0%,rgba(251,146,60,.14),transparent 60%)}
+.login.hide{display:none}
+.lbox{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:26px}
+.lbox h1{font-size:20px;font-weight:800;margin:14px 0 4px}
+.lbox p{font-size:12px;color:var(--muted);margin-bottom:18px}
+.lerr{color:#fca5a5;font-size:12px;min-height:18px;margin-top:8px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(40px);opacity:0;z-index:400;background:rgba(16,185,129,.95);color:#fff;padding:11px 20px;border-radius:24px;font-size:13px;font-weight:700;transition:all .3s;pointer-events:none;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{background:rgba(220,38,38,.95)}
+.skel{height:64px;border-radius:12px;background:linear-gradient(90deg,rgba(30,41,59,.5),rgba(51,65,85,.5),rgba(30,41,59,.5));background-size:200% 100%;animation:sh 1.4s infinite;margin:10px 16px}
+@keyframes sh{to{background-position:-200% 0}}
 
-        .input-group { margin-bottom: 20px; }
-
-        .input-group label {
-            display: block; color: #cbd5e1;
-            font-size: 13px; margin-bottom: 8px;
-            font-weight: 600; letter-spacing: 0.5px;
-        }
-
-        .input-group input {
-            width: 100%; padding: 14px 18px;
-            background: rgba(30, 41, 59, 0.6);
-            border: 1px solid rgba(59, 130, 246, 0.2);
-            border-radius: 12px; color: #fff;
-            font-size: 15px; outline: none;
-            transition: all 0.3s ease;
-            font-family: 'Syne', sans-serif;
-        }
-        .input-group input:focus {
-            border-color: #3b82f6;
-            background: rgba(30, 41, 59, 0.9);
-            box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
-        }
-        .input-group input::placeholder { color: #475569; }
-
-        .login-btn {
-            width: 100%; padding: 16px;
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-            border: none; border-radius: 12px;
-            color: #fff; font-size: 16px; font-weight: 700;
-            cursor: pointer; transition: all 0.3s ease;
-            margin-top: 8px; overflow: hidden; position: relative;
-            font-family: 'Syne', sans-serif;
-        }
-        .login-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 30px rgba(59,130,246,0.4);
-        }
-        .login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .login-btn::before {
-            content: '';
-            position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
-            transition: left 0.5s;
-        }
-        .login-btn:hover::before { left: 100%; }
-
-        .message {
-            margin-top: 16px; padding: 12px 16px;
-            border-radius: 10px; font-size: 13px;
-            text-align: center; display: none;
-            font-family: 'JetBrains Mono', monospace;
-        }
-        .message.error { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
-        .message.success { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: #6ee7b7; }
-
-        .loading-spinner {
-            display: inline-block; width: 15px; height: 15px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-top-color: #fff; border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-right: 8px; vertical-align: middle;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        .footer {
-            margin-top: 28px; text-align: center;
-            color: #374151; font-size: 12px;
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        /* Welcome overlay */
-        #welcome-screen {
-            position: fixed; top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(5, 8, 22, 0.96);
-            backdrop-filter: blur(12px);
-            z-index: 1000; display: none;
-            justify-content: center; align-items: center;
-            flex-direction: column;
-        }
-        #welcome-screen.show { display: flex; animation: fadeIn 0.5s ease; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        .welcome-icon { font-size: 64px; margin-bottom: 20px; animation: bounce 0.8s ease; }
-        @keyframes bounce {
-            0%,100% { transform: translateY(0); }
-            40% { transform: translateY(-16px); }
-        }
-        .welcome-content { text-align: center; }
-        .welcome-content h2 {
-            font-size: 40px; font-weight: 800; margin-bottom: 8px;
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        }
-        .welcome-content p { color: #cbd5e1; font-size: 18px; margin-bottom: 12px; }
-        .role-badge {
-            display: inline-block; padding: 8px 20px;
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-            border-radius: 20px; font-weight: 700; color: #fff; font-size: 14px;
-        }
-        .redirect-msg {
-            margin-top: 20px; color: #64748b;
-            font-size: 13px; font-family: 'JetBrains Mono', monospace;
-        }
-    </style>
-
-    <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-1PYNBFGPML"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-1PYNBFGPML');
-</script>
-    
+/* ── Responsive ── */
+@media(max-width:900px){.g3{grid-template-columns:1fr 1fr}.g12{grid-template-columns:1fr}}
+@media(max-width:760px){
+  .app{padding:0 12px 30px}
+  .header{margin:0 -12px;padding-left:12px;padding-right:12px}
+  .brand-t{font-size:15px}.brand-s{display:none}.logo{width:34px;height:34px;font-size:16px}
+  .live span,.user .rl{display:none}
+  .user .nm{max-width:84px}
+  .f-toggle{display:inline-flex}
+  .fbar2{display:none}.fbar2.open{display:flex}
+  .fbar .dinput{flex:1;min-width:0}
+  .fbar2 .fsel{flex:1 1 calc(50% - 8px)}
+  .upd{display:none}
+  .kpis{grid-template-columns:repeat(2,1fr);gap:8px}
+  .kpi{padding:11px 12px}.kpi-v{font-size:23px}
+  .tab{min-width:0;flex:0 0 auto;padding:9px 12px;font-size:12px}
+  .g2,.g3{grid-template-columns:1fr}
+  .cw{height:220px}
+  .card{padding:14px}
+  .asum{gap:6px}.ascard{padding:10px}.ascard .n{font-size:24px}
+  .acard{grid-template-columns:36px 1fr;padding:11px 12px}
+  .a-ic{width:36px;height:36px;font-size:16px}
+  .a-v{grid-column:2;text-align:left;display:flex;gap:6px;align-items:baseline}
+  .a-v b{display:inline;font-size:15px}
+  .search{flex:1;min-width:0}
+  /* filas → tarjetas */
+  .th{display:none}
+  .tb .tr{grid-template-columns:1fr 1fr;gap:8px 12px;padding:12px 14px}
+  .tb .td{white-space:normal}
+  .tb .td[data-l]::before{content:attr(data-l);display:block;font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+  .tb .td.wide{grid-column:1/-1}
+  .tb .td.wide::before{display:none}
+  .modal{padding:0}
+  .mbox{border-radius:0;min-height:100%;border:none}
+  .mh{border-radius:0;padding:calc(12px + env(safe-area-inset-top)) 14px 12px}
+  .mh-t{font-size:16px}
+  .mb{padding:14px}
+  .mkpis{grid-template-columns:repeat(2,1fr)}
+  .form .row2{grid-template-columns:1fr}
+  .hb{grid-template-columns:92px 1fr 56px;font-size:11px}
+}
+</style>
 </head>
 <body>
-    <div id="canvas-container"></div>
 
-    <div class="login-container">
-        <div class="login-box">
-            <div class="logo">
-                <span class="logo-icon">✈️</span>
-                <h1>Flights Report</h1>
-                <p>Turnaround Check · v3.1</p>
-            </div>
+<!-- LOGIN -->
+<div class="login" id="login">
+  <form class="lbox" onsubmit="doLogin(event)">
+    <div class="logo">📦</div>
+    <h1>Rampa Cargo · Control Tower</h1>
+    <p>Acceso para supervisión, operaciones y SMS.</p>
+    <div class="form">
+      <div><label for="lu">Usuario</label><input id="lu" autocomplete="username" autocapitalize="none" required></div>
+      <div><label for="lp">Contraseña</label><input id="lp" type="password" autocomplete="current-password" required></div>
+      <button class="btn-p" id="lbtn" type="submit">Entrar</button>
+    </div>
+    <div class="lerr" id="lerr"></div>
+  </form>
+</div>
 
-            <form id="loginForm" onsubmit="handleLogin(event)">
-                <div class="input-group">
-                    <label for="username">Usuario</label>
-                    <input type="text" id="username" placeholder="Ingrese su usuario"
-                           required autocomplete="username">
-                </div>
-                <div class="input-group">
-                    <label for="password">Contraseña</label>
-                    <input type="password" id="password" placeholder="••••••••"
-                           required autocomplete="current-password">
-                </div>
-                <button type="submit" class="login-btn" id="loginBtn">
-                    <span id="btnText">Iniciar Sesión</span>
-                </button>
-                <div class="message" id="message"></div>
-            </form>
+<div class="app">
+  <header class="header" id="hdr">
+    <div class="h-top">
+      <div class="brand">
+        <div class="logo">📦</div>
+        <div><div class="brand-t">Rampa Cargo</div><div class="brand-s">Control Tower · Cargo Ops</div></div>
+      </div>
+      <div class="h-right">
+        <div class="live"><i></i><span>LIVE</span></div>
+        <div class="user"><div class="av" id="uav">–</div><div><div class="nm" id="unm">–</div><div class="rl" id="url">–</div></div></div>
+        <button class="btn-out" onclick="logout()">Salir</button>
+      </div>
+    </div>
+    <div class="fbar">
+      <div class="pills" id="datePills">
+        <button class="pill" data-d="today">Hoy</button>
+        <button class="pill" data-d="yesterday">Ayer</button>
+        <button class="pill on" data-d="7">7 días</button>
+        <button class="pill" data-d="30">30 días</button>
+        <button class="pill" data-d="all">Todo</button>
+      </div>
+      <input type="date" class="dinput" id="fDate" aria-label="Fecha específica">
+      <button class="rbtn f-toggle" id="fToggle" onclick="toggleFilters()">⚙ Filtros</button>
+      <button class="rbtn" id="btnRefresh" onclick="loadData(true)"><span class="ic">↻</span>Actualizar</button>
+      <button class="rbtn" id="btnSync" onclick="syncNow()" title="Copia ya mismo los datos del Sheet operativo"><span class="ic">⟳</span>Sync</button>
+      <span class="upd" id="upd">–</span>
+    </div>
+    <div class="fbar fbar2" id="fbar2">
+      <select class="fsel" id="fAirline" aria-label="Aerolínea"><option value="all">✈️ Todas las aerolíneas</option></select>
+      <select class="fsel" id="fInspector" aria-label="Inspector"><option value="all">👤 Todos los inspectores</option></select>
+      <select class="fsel" id="fShift" aria-label="Turno"><option value="all">🕒 Todos los turnos</option><option>Mañana</option><option>Tarde</option><option>Noche</option></select>
+      <select class="fsel" id="fStatus" aria-label="Estado"><option value="all">📌 Todo estado</option><option>Completado</option><option>En Proceso</option></select>
+      <button class="clear" id="fClear" onclick="clearFilters()">✕ Limpiar</button>
+    </div>
+  </header>
 
-            <div class="footer">
-                📊 Reporte x Vuelo · Photo 3.1 · Historial Live
-            </div>
-        </div>
+  <main class="main">
+    <div class="kpis">
+      <div class="kpi" style="--c:var(--orange)"><div class="kpi-l">Vuelos</div><div class="kpi-v" id="kVuelos">–</div><div class="kpi-s" id="kVuelosS">en el período</div></div>
+      <div class="kpi" style="--c:var(--good)"><div class="kpi-l">Completados</div><div class="kpi-v" id="kDone">–</div><div class="kpi-s" id="kDoneS">–</div></div>
+      <div class="kpi" style="--c:var(--warning)"><div class="kpi-l">En proceso</div><div class="kpi-v" id="kRun">–</div><div class="kpi-s">sin cerrar</div></div>
+      <div class="kpi" style="--c:var(--s2)"><div class="kpi-l">Turnaround prom.</div><div class="kpi-v" id="kTurn">–</div><div class="kpi-s">En Posición → Push Back</div></div>
+      <div class="kpi" style="--c:var(--critical)"><div class="kpi-l">Alertas</div><div class="kpi-v" id="kAlerts">–</div><div class="kpi-s" id="kAlertsS">críticas + advertencias</div></div>
+      <div class="kpi" style="--c:var(--purple)"><div class="kpi-l">SMS abiertos</div><div class="kpi-v" id="kSms">–</div><div class="kpi-s" id="kSmsS">seguimiento pendiente</div></div>
     </div>
 
-    <div id="welcome-screen">
-        <div class="welcome-icon">🎉</div>
-        <div class="welcome-content">
-            <h2>¡Bienvenido!</h2>
-            <p id="welcomeUser"></p>
-            <span class="role-badge" id="welcomeRole"></span>
-            <p class="redirect-msg">Cargando tu historial...</p>
+    <nav class="tabs" id="tabs">
+      <button class="tab on" data-t="rampa">📋 Rampa <span class="badge" id="bRampa">0</span></button>
+      <button class="tab" data-t="alertas">🚨 Alertas <span class="badge alert" id="bAlertas">0</span></button>
+      <button class="tab" data-t="analitica">📊 Analítica</button>
+      <button class="tab" data-t="sms">🦺 SMS <span class="badge alert" id="bSms">0</span></button>
+    </nav>
+
+    <!-- RAMPA -->
+    <section class="panel on" id="p-rampa">
+      <div class="toolbar">
+        <div class="tt">📋 Vuelos de carga <span class="cnt" id="cRampa">0</span></div>
+        <div style="display:flex;gap:8px;flex:1;justify-content:flex-end;min-width:220px">
+          <input class="search" id="qRampa" placeholder="Buscar vuelo, inspector…" aria-label="Buscar">
+          <button class="rbtn" onclick="exportFlights()">📥 Excel</button>
         </div>
+      </div>
+      <div class="tbl" style="--cols:1.7fr 1.1fr 1.1fr .8fr 1fr .9fr .6fr .5fr">
+        <div class="tr th"><div>Vuelo</div><div>Inspector</div><div>Inicio</div><div>Turnaround</div><div>Avance</div><div>Estado</div><div>Fotos</div><div>Inc.</div></div>
+        <div class="tb" id="tbRampa"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+      </div>
+    </section>
+
+    <!-- ALERTAS -->
+    <section class="panel" id="p-alertas">
+      <div class="asum">
+        <div class="ascard crit" data-a="critical"><div class="n" id="aCrit">0</div><div class="l">🔴 CRÍTICAS</div></div>
+        <div class="ascard warn" data-a="warning"><div class="n" id="aWarn">0</div><div class="l">🟡 ADVERTENCIAS</div></div>
+        <div class="ascard info" data-a="info"><div class="n" id="aInfo">0</div><div class="l">🔵 INFORMATIVAS</div></div>
+      </div>
+      <div class="toolbar">
+        <div class="tt">🚨 Alertas del período <span class="cnt" id="cAlertas">0</span></div>
+        <button class="rbtn" id="aAll" onclick="setAlertMode('all')">Ver todas</button>
+      </div>
+      <div class="alist" id="alist"></div>
+    </section>
+
+    <!-- ANALÍTICA -->
+    <section class="panel" id="p-analitica">
+      <div class="sec">operación</div>
+      <div class="grid g12">
+        <div class="card"><h3>🌅 Vuelos por turno</h3><div class="cap">Según hora de inicio de la inspección</div><div class="shifts" id="shifts"></div>
+          <div style="margin-top:14px" class="hbars" id="shiftTurn"></div></div>
+        <div class="card"><h3>🕒 Vuelos por hora del día</h3><div class="cap">Hora local de inicio</div><div class="cw"><canvas id="chHour"></canvas></div></div>
+      </div>
+      <div class="grid g2">
+        <div class="card"><h3>📅 Actividad diaria</h3><div class="cap">Últimos 14 días del período</div>
+          <div class="legend"><span><i style="background:var(--s1)"></i>Completados</span><span><i style="background:var(--s2)"></i>En proceso</span></div>
+          <div class="cw"><canvas id="chDaily"></canvas></div></div>
+        <div class="card"><h3>✈️ Vuelos por aerolínea</h3><div class="cap">Cantidad de vuelos inspeccionados</div><div class="hbars" id="hbAirline"></div></div>
+      </div>
+
+      <div class="sec">tiempos</div>
+      <div class="grid g2">
+        <div class="card"><h3>⏱ Duración promedio por fase</h3><div class="cap">Minutos promedio · solo vuelos con ambos registros</div><div class="hbars" id="hbPhases"></div></div>
+        <div class="card"><h3>📊 Distribución del turnaround</h3><div class="cap">Vuelos por rango de minutos (En Posición → Push Back)</div><div class="cw"><canvas id="chTurnHist"></canvas></div></div>
+      </div>
+      <div class="grid g2">
+        <div class="card"><h3>🛫 Turnaround promedio por aerolínea</h3><div class="cap">Minutos · entre paréntesis, vuelos medidos</div><div class="hbars" id="hbTurnAirline"></div></div>
+        <div class="card"><h3>📦 Uso de zonas</h3><div class="cap">Vuelos que operaron cada zona</div>
+          <div class="legend"><span><i style="background:var(--s1)"></i>Descarga</span><span><i style="background:var(--s2)"></i>Cargado</span></div>
+          <div class="cw"><canvas id="chZones"></canvas></div></div>
+      </div>
+
+      <div class="sec">calidad del reporte</div>
+      <div class="grid g2">
+        <div class="card"><h3>✅ Cumplimiento por checkpoint</h3><div class="cap">% de vuelos cerrados que registraron cada checkpoint · los más bajos primero</div><div class="hbars" id="hbCompliance"></div></div>
+        <div class="card"><h3>🏆 Desempeño por inspector</h3><div class="cap">Toque un encabezado para ordenar</div><div class="tscroll"><table class="rank" id="rankIns"></table></div></div>
+      </div>
+    </section>
+
+    <!-- SMS -->
+    <section class="panel" id="p-sms">
+      <div class="kpis">
+        <div class="kpi" style="--c:var(--s2)"><div class="kpi-l">Reportes SMS</div><div class="kpi-v" id="sTotal">–</div><div class="kpi-s">en el período</div></div>
+        <div class="kpi" style="--c:var(--good)"><div class="kpi-l">🟢 Severidad baja</div><div class="kpi-v" id="sBaja">–</div><div class="kpi-s">&nbsp;</div></div>
+        <div class="kpi" style="--c:var(--warning)"><div class="kpi-l">🟡 Severidad media</div><div class="kpi-v" id="sMedia">–</div><div class="kpi-s">&nbsp;</div></div>
+        <div class="kpi" style="--c:var(--critical)"><div class="kpi-l">🔴 Severidad alta</div><div class="kpi-v" id="sAlta">–</div><div class="kpi-s">&nbsp;</div></div>
+        <div class="kpi" style="--c:var(--purple)"><div class="kpi-l">Seguimiento pendiente</div><div class="kpi-v" id="sOpen">–</div><div class="kpi-s" id="sOpenS">requieren cierre</div></div>
+        <div class="kpi" style="--c:var(--orange)"><div class="kpi-l">Tiempo de cierre</div><div class="kpi-v" id="sClose">–</div><div class="kpi-s">promedio, días</div></div>
+      </div>
+      <div class="grid g2">
+        <div class="card"><h3>📁 Incidentes por tipo</h3><div class="cap">Período filtrado</div><div class="hbars" id="hbSmsType"></div></div>
+        <div class="card"><h3>📈 Incidentes por semana</h3><div class="cap">Por severidad</div>
+          <div class="legend"><span><i style="background:var(--good)"></i>🟢 Baja</span><span><i style="background:var(--warning)"></i>🟡 Media</span><span><i style="background:var(--critical)"></i>🔴 Alta</span></div>
+          <div class="cw"><canvas id="chSmsWeek"></canvas></div></div>
+      </div>
+      <div class="toolbar" style="margin-top:6px">
+        <div class="tt">🦺 Reportes SMS <span class="cnt" id="cSms">0</span></div>
+        <div class="fbar" style="flex:1;justify-content:flex-end">
+          <select class="fsel" id="smsEstado"><option value="all">📌 Todo estado</option><option value="open">⏳ Pendientes</option></select>
+          <select class="fsel" id="smsSev"><option value="all">⚠️ Toda severidad</option><option>Baja</option><option>Media</option><option>Alta</option></select>
+          <select class="fsel" id="smsTipo"><option value="all">📁 Todo tipo</option></select>
+          <button class="rbtn" onclick="exportSms()">📥 Excel</button>
+        </div>
+      </div>
+      <div class="tbl" style="--cols:.8fr 1fr 1.3fr 1.2fr .8fr 1fr .9fr .5fr">
+        <div class="tr th"><div>Ticket</div><div>Fecha</div><div>Vuelo</div><div>Tipo</div><div>Severidad</div><div>Estado</div><div>Reportó</div><div>Foto</div></div>
+        <div class="tb" id="tbSms"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- DETALLE VUELO -->
+<div class="modal" id="mFlight" onclick="if(event.target===this)closeModal('mFlight')">
+  <div class="mbox">
+    <div class="mh"><div class="mh-id"><span class="al-badge" id="mfA">–</span><div style="min-width:0"><div class="mh-t" id="mfT">–</div><div class="mh-s" id="mfS">–</div></div></div>
+      <div style="display:flex;gap:8px;align-items:center"><span id="mfSt"></span><button class="x" onclick="closeModal('mFlight')" aria-label="Cerrar">✕</button></div></div>
+    <div class="mb" id="mfBody"></div>
+  </div>
+</div>
+
+<!-- DETALLE SMS -->
+<div class="modal" id="mSms" onclick="if(event.target===this)closeModal('mSms')">
+  <div class="mbox" style="max-width:760px">
+    <div class="mh"><div class="mh-id"><span class="al-badge">🦺</span><div style="min-width:0"><div class="mh-t" id="msT">–</div><div class="mh-s" id="msS">–</div></div></div>
+      <button class="x" onclick="closeModal('mSms')" aria-label="Cerrar">✕</button></div>
+    <div class="mb" id="msBody"></div>
+  </div>
+</div>
+
+<!-- VISOR DE FOTOS -->
+<div class="lb" id="lb" onclick="if(event.target===this)closeLb()">
+  <button class="x" onclick="closeLb()" aria-label="Cerrar">✕</button>
+  <button class="nav prev" onclick="lbStep(-1)" aria-label="Anterior">‹</button>
+  <img id="lbImg" alt="">
+  <div class="cap2" id="lbCap"></div>
+  <a id="lbLink" target="_blank" rel="noopener">Abrir original en Drive ↗</a>
+  <button class="nav next" onclick="lbStep(1)" aria-label="Siguiente">›</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═════════════════════════════════════════════════════════════════════════════
+//  CONFIGURACIÓN
+// ═════════════════════════════════════════════════════════════════════════════
+const API_URL = 'https://script.google.com/macros/s/AKfycbx0MXrQ100pbi0TrQlWI9d2sdVsgUGOto5qWEDIB5pvqkNzs1mDcSwbmUoeRdXFMHoi1Q/exec';   // URL /exec del Apps Script del Sheet ESPEJO
+const TZ = 'America/Costa_Rica';
+// Login desactivado por ahora. Para reactivarlo: true aquí y REQUIRE_LOGIN = true en el Code.gs del espejo.
+const REQUIRE_LOGIN = false;
+
+// Umbrales de alertas — VALORES INICIALES: ajústalos con operaciones / SMS
+const CONFIG = {
+  loadDays: 60,                 // días que se cargan al abrir (Todo = histórico completo)
+  autoRefreshMs: 2 * 60 * 1000,
+  // SLA en minutos desde "En Posición"
+  sla: [
+    { label: 'Banda',           cp: 'Banda',            warn: 10,  crit: 20 },
+    { label: 'Escalera',        cp: 'Escalera',         warn: 10,  crit: 20 },
+    { label: 'Inicio descarga', group: 'Inicia Descarga', warn: 15, crit: 30 },
+    { label: 'Turnaround',      cp: 'Push Back',        warn: 120, crit: 180 }
+  ],
+  openWarnH: 6, openCritH: 12,          // reporte sin cerrar (horas)
+  minVerifPhotos: 2,                     // fotos mínimas en Seguros y Posición
+  // Si faltan al cerrar → alerta CRÍTICA (el resto de faltantes = advertencia)
+  safetyCps: ['Briefing', 'Inicio FOD', 'FOD Durante Operación', 'FOD Final',
+              'Verificación - Seguros', 'Verificación - Posición', '360 Fin Operación'],
+  pageSize: 60
+};
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  ESTADO
+// ═════════════════════════════════════════════════════════════════════════════
+let META = null, FLIGHTS = [], SMS = [], VIEW = [], SMSVIEW = [], ALERTS = [], loadedDays = null;
+const S = { date: '7', day: '', airline: 'all', inspector: 'all', shift: 'all', status: 'all', tab: 'rampa',
+            alertMode: 'all', q: '', page: 1, rankSort: { k: 'n', dir: -1 } };
+const charts = {};
+let session = null, refreshTimer = null;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmtT = d => d ? new Date(d).toLocaleTimeString('es-CR', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false }) : '–';
+const fmtD = d => d ? new Date(d).toLocaleDateString('es-CR', { timeZone: TZ, day: '2-digit', month: 'short' }) : '–';
+const fmtDT = d => d ? fmtD(d) + ' ' + fmtT(d) : '–';
+const ymd = d => new Date(d).toLocaleDateString('en-CA', { timeZone: TZ });   // YYYY-MM-DD local
+const hourOf = d => Number(new Date(d).toLocaleString('en-GB', { timeZone: TZ, hour: '2-digit', hour12: false })) % 24;
+const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+const mins = (a, b) => (a && b) ? Math.round((new Date(b) - new Date(a)) / 60000) : null;
+const fmtMin = m => m === null || m === undefined || isNaN(m) ? '–' : m >= 90 ? `${Math.floor(m / 60)}h ${String(Math.round(m % 60)).padStart(2, '0')}m` : `${Math.round(m)} min`;
+const fl = f => `${f.an || f.a} ${f.arr}${f.dep ? ' / ' + f.dep : ''}`;
+const thumb = (id, w = 320) => `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${w}`;
+const fileIdOf = url => (String(url || '').match(/\/d\/([\w-]+)/) || String(url || '').match(/[?&]id=([\w-]+)/) || [])[1] || '';
+const isOpenSms = s => s.estado !== 'Cerrado' && s.estado !== 'Archivado';
+const sevChip = s => /alta/i.test(s) ? `<span class="chip c-crit">🔴 Alta</span>` : /media/i.test(s) ? `<span class="chip c-warn">🟡 Media</span>` : /baja/i.test(s) ? `<span class="chip c-good">🟢 Baja</span>` : `<span class="chip c-mute">${esc(s || '–')}</span>`;
+const estChip = e => e === 'Cerrado' ? `<span class="chip c-ok">✓ Cerrado</span>` : e === 'Archivado' ? `<span class="chip c-mute">Archivado</span>` : e === 'En proceso' ? `<span class="chip c-blue">⚙ En proceso</span>` : e === 'En revisión' ? `<span class="chip c-warn">🔎 En revisión</span>` : `<span class="chip c-run">● ${esc(e || 'Recibido')}</span>`;
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  API (JSONP, igual que el resto de apps)
+// ═════════════════════════════════════════════════════════════════════════════
+function api(action, params = {}, timeout = 45000) {
+  return new Promise((resolve, reject) => {
+    const cb = 'cb_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const q = new URLSearchParams(Object.assign({ action, callback: cb }, session ? { token: session.token } : {}, params));
+    const sc = document.createElement('script');
+    const done = () => { delete window[cb]; sc.remove(); clearTimeout(t); };
+    const t = setTimeout(() => { done(); reject(new Error('Tiempo de espera agotado')); }, timeout);
+    window[cb] = res => {
+      done();
+      if (res && res.auth && REQUIRE_LOGIN) { showLogin('Tu sesión expiró. Inicia sesión de nuevo.'); return reject(new Error(res.message)); }
+      res && res.success ? resolve(res) : reject(new Error((res && res.message) || 'Error del servidor'));
+    };
+    sc.onerror = () => { done(); reject(new Error('No se pudo conectar con el servidor')); };
+    sc.src = API_URL + '?' + q.toString();
+    document.body.appendChild(sc);
+  });
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  SESIÓN
+// ═════════════════════════════════════════════════════════════════════════════
+function showLogin(msg) {
+  session = null;
+  try { sessionStorage.removeItem('cargoDash'); } catch (e) {}
+  $('lerr').textContent = msg || '';
+  $('login').classList.remove('hide');
+  clearInterval(refreshTimer);
+}
+async function doLogin(e) {
+  e.preventDefault();
+  const b = $('lbtn'); b.disabled = true; b.textContent = 'Verificando…'; $('lerr').textContent = '';
+  try {
+    const r = await api('login', { username: $('lu').value.trim(), password: $('lp').value });
+    session = { token: r.token, username: r.username, role: r.role };
+    try { sessionStorage.setItem('cargoDash', JSON.stringify(session)); } catch (e2) {}
+    startApp();
+  } catch (err) { $('lerr').textContent = err.message; }
+  b.disabled = false; b.textContent = 'Entrar';
+}
+function logout() {
+  if (!confirm('¿Cerrar sesión?')) return;
+  showLogin('');
+}
+function startApp() {
+  $('login').classList.add('hide');
+  if (!REQUIRE_LOGIN) {
+    let nm = ''; try { nm = localStorage.getItem('cargoDashName') || ''; } catch (e) {}
+    session = { token: '', username: nm || 'Supervisión', role: 'Acceso sin login' };
+    document.querySelector('.btn-out').style.display = 'none';
+  }
+  $('unm').textContent = session.username; $('url').textContent = session.role;
+  $('uav').textContent = String(session.username).slice(0, 2).toUpperCase();
+  loadData();
+  clearInterval(refreshTimer);
+  refreshTimer = setInterval(() => { if (!document.hidden) loadData(false, true); }, CONFIG.autoRefreshMs);
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  CARGA DE DATOS
+// ═════════════════════════════════════════════════════════════════════════════
+function neededDays() {
+  if (S.date === 'all') return 0;
+  if (S.day) { const d = Math.ceil((Date.now() - new Date(S.day + 'T00:00:00-06:00')) / 86400000) + 1; return Math.max(CONFIG.loadDays, d); }
+  return CONFIG.loadDays;
+}
+async function loadData(manual = false, silent = false) {
+  const days = neededDays();
+  const btn = $('btnRefresh'); btn.classList.add('spin');
+  try {
+    const r = await api('getDashboard', { days });
+    META = { phases: r.phases, cpDefs: r.cpDefs, zones: r.zones, smsStates: r.smsStates };
+    FLIGHTS = r.flights.map(prepFlight);
+    SMS = r.sms;
+    loadedDays = days;
+    $('upd').textContent = 'Datos: ' + (r.lastSync ? fmtDT(r.lastSync) : 'sin sync') + ' · vista ' + fmtT(r.generatedAt);
+    fillFilterOptions();
+    applyFilters();
+    if (manual) toast('✓ Actualizado · ' + FLIGHTS.length + ' vuelos');
+  } catch (err) {
+    if (!silent) toast(err.message, true);
+    if (!FLIGHTS.length) $('tbRampa').innerHTML = `<div class="empty">⚠ ${esc(err.message)}</div>`;
+  }
+  btn.classList.remove('spin');
+}
+async function syncNow() {
+  const b = $('btnSync'); b.classList.add('spin');
+  try { const r = await api('syncNow', {}, 120000); toast(`✓ Sync: ${r.vuelos} vuelos · ${r.incidentes} SMS (${r.segundos}s)`); await loadData(); }
+  catch (err) { toast(err.message, true); }
+  b.classList.remove('spin');
+}
+function prepFlight(f) {
+  f.start = new Date(f.s);
+  f.t = {};
+  Object.keys(f.cps).forEach(l => { f.t[l] = f.cps[l].map(x => new Date(x)); });
+  f.first = l => f.t[l] ? f.t[l][0] : null;
+  f.last = l => f.t[l] ? f.t[l][f.t[l].length - 1] : null;
+  f.day = ymd(f.start);
+  return f;
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  FILTROS
+// ═════════════════════════════════════════════════════════════════════════════
+function inPeriod(d) {
+  if (!d) return false;
+  const day = ymd(d), today = ymd(new Date());
+  if (S.day) return day === S.day;
+  if (S.date === 'today') return day === today;
+  if (S.date === 'yesterday') return day === ymd(Date.now() - 86400000);
+  if (S.date === 'all') return true;
+  return Date.now() - new Date(d).getTime() <= Number(S.date) * 86400000;
+}
+function fillFilterOptions() {
+  const fill = (sel, values, label) => {
+    const cur = sel.value;
+    sel.innerHTML = `<option value="all">${label}</option>` + values.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+    sel.value = values.includes(cur) ? cur : 'all';
+  };
+  fill($('fAirline'), [...new Set(FLIGHTS.map(f => f.an || f.a))].sort(), '✈️ Todas las aerolíneas');
+  fill($('fInspector'), [...new Set(FLIGHTS.map(f => f.ins).filter(Boolean))].sort(), '👤 Todos los inspectores');
+  fill($('smsTipo'), [...new Set(SMS.map(s => s.tipo).filter(Boolean))].sort(), '📁 Todo tipo');
+  const st = $('smsEstado'), cur = st.value;
+  st.innerHTML = `<option value="all">📌 Todo estado</option><option value="open">⏳ Pendientes</option>` + (META.smsStates || []).map(s => `<option>${s}</option>`).join('');
+  st.value = cur || 'all';
+}
+function applyFilters() {
+  S.airline = $('fAirline').value; S.inspector = $('fInspector').value; S.shift = $('fShift').value; S.status = $('fStatus').value;
+  ['fAirline', 'fInspector', 'fShift', 'fStatus'].forEach(id => $(id).classList.toggle('has', $(id).value !== 'all'));
+  $('fClear').classList.toggle('show', ['fAirline', 'fInspector', 'fShift', 'fStatus'].some(id => $(id).value !== 'all'));
+  VIEW = FLIGHTS.filter(f => inPeriod(f.start)
+    && (S.airline === 'all' || (f.an || f.a) === S.airline)
+    && (S.inspector === 'all' || f.ins === S.inspector)
+    && (S.shift === 'all' || f.shift === S.shift)
+    && (S.status === 'all' || f.st === S.status))
+    .sort((a, b) => b.start - a.start);
+  const keys = new Set(VIEW.map(f => f.k));
+  const flightFiltersOn = S.airline !== 'all' || S.inspector !== 'all' || S.shift !== 'all' || S.status !== 'all';
+  SMSVIEW = SMS.filter(s => inPeriod(s.fecha) && (!flightFiltersOn || keys.has(s.key) ||
+    ((S.airline === 'all' || s.airline === S.airline) && (S.inspector === 'all' || s.inspector === S.inspector) && S.shift === 'all' && S.status === 'all')));
+  S.page = 1;
+  buildAlerts();
+  renderKpis();
+  renderRampa();
+  renderAlerts();
+  renderSms();
+  if (S.tab === 'analitica') renderAnalytics();
+}
+function clearFilters() { ['fAirline', 'fInspector', 'fShift', 'fStatus'].forEach(id => $(id).value = 'all'); applyFilters(); }
+function toggleFilters() { $('fbar2').classList.toggle('open'); updateHdr(); }
+
+$('datePills').addEventListener('click', e => {
+  const b = e.target.closest('.pill'); if (!b) return;
+  document.querySelectorAll('#datePills .pill').forEach(p => p.classList.toggle('on', p === b));
+  S.date = b.dataset.d; S.day = ''; $('fDate').value = '';
+  if (neededDays() !== loadedDays && (neededDays() === 0 || neededDays() > loadedDays)) loadData(); else applyFilters();
+});
+$('fDate').addEventListener('change', e => {
+  S.day = e.target.value;
+  document.querySelectorAll('#datePills .pill').forEach(p => p.classList.toggle('on', !S.day && p.dataset.d === S.date));
+  if (S.day && loadedDays !== 0 && neededDays() > loadedDays) loadData(); else applyFilters();
+});
+['fAirline', 'fInspector', 'fShift', 'fStatus'].forEach(id => $(id).addEventListener('change', applyFilters));
+['smsEstado', 'smsSev', 'smsTipo'].forEach(id => $(id).addEventListener('change', renderSms));
+$('qRampa').addEventListener('input', e => { S.q = e.target.value.trim().toLowerCase(); S.page = 1; renderRampa(); });
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  KPIs
+// ═════════════════════════════════════════════════════════════════════════════
+function renderKpis() {
+  const done = VIEW.filter(f => f.st === 'Completado').length;
+  const turns = VIEW.map(f => f.m.turn).filter(v => v !== null);
+  $('kVuelos').textContent = VIEW.length;
+  $('kVuelosS').textContent = VIEW.reduce((a, f) => a + (f.ph || 0), 0) + ' fotos';
+  $('kDone').textContent = done;
+  $('kDoneS').textContent = VIEW.length ? Math.round(done / VIEW.length * 100) + '% del período' : '–';
+  $('kRun').textContent = VIEW.length - done;
+  $('kTurn').innerHTML = turns.length ? fmtMin(avg(turns)) : '–';
+  const crit = ALERTS.filter(a => a.type === 'critical').length, warn = ALERTS.filter(a => a.type === 'warning').length;
+  $('kAlerts').textContent = crit + warn;
+  $('kAlertsS').textContent = `${crit} críticas · ${warn} advertencias`;
+  const open = SMS.filter(isOpenSms);
+  $('kSms').textContent = open.length;
+  $('kSmsS').textContent = open.filter(s => /alta/i.test(s.severidad)).length + ' de severidad alta';
+  $('bRampa').textContent = VIEW.length;
+  $('bAlertas').textContent = crit + warn;
+  $('bSms').textContent = open.length;
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  TAB RAMPA
+// ═════════════════════════════════════════════════════════════════════════════
+function renderRampa() {
+  const list = S.q ? VIEW.filter(f => [f.an, f.a, f.arr, f.dep, f.ins, f.k].join(' ').toLowerCase().includes(S.q)) : VIEW;
+  $('cRampa').textContent = list.length;
+  if (!list.length) { $('tbRampa').innerHTML = `<div class="empty">📭 No hay vuelos para este filtro.</div>`; return; }
+  const shown = list.slice(0, S.page * CONFIG.pageSize);
+  $('tbRampa').innerHTML = shown.map(f => {
+    const done = f.st === 'Completado';
+    return `<div class="tr" onclick="openFlight('${esc(f.k)}')">
+      <div class="td wide"><span class="al-badge">${esc(f.a)}</span><b>🛬 ${esc(f.arr)} · 🛫 ${esc(f.dep || '–')}</b><span class="sub" style="display:inline;margin-left:6px">${esc(f.an)}</span></div>
+      <div class="td" data-l="Inspector">${esc(f.ins || '–')}</div>
+      <div class="td" data-l="Inicio">${fmtDT(f.start)}<span class="sub">${esc(f.shift)}</span></div>
+      <div class="td" data-l="Turnaround">${fmtMin(f.m.turn)}</div>
+      <div class="td" data-l="Avance"><div class="bar"><i class="${f.pct >= 100 ? 'full' : ''}" style="width:${f.pct}%"></i></div><span class="sub">${f.rq}/${f.rqt} oblig. · ${f.pct}%</span></div>
+      <div class="td" data-l="Estado">${done ? '<span class="chip c-ok">✓ Completado</span>' : '<span class="chip c-run">● En proceso</span>'}${f.miss.length && done ? `<span class="sub" style="color:#fcd34d">⚠ ${f.miss.length} faltantes</span>` : ''}</div>
+      <div class="td" data-l="Fotos">📸 ${f.ph || 0}</div>
+      <div class="td" data-l="Inc.">${f.inc ? `<span class="chip c-crit">⚠ ${f.inc}</span>` : '<span class="na">—</span>'}</div>
+    </div>`;
+  }).join('') + (list.length > shown.length ? `<button class="more" onclick="S.page++;renderRampa()">Ver ${Math.min(CONFIG.pageSize, list.length - shown.length)} más de ${list.length - shown.length}</button>` : '');
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  DETALLE DE VUELO
+// ═════════════════════════════════════════════════════════════════════════════
+let LB = { list: [], i: 0 };
+async function openFlight(key) {
+  const f = FLIGHTS.find(x => x.k === key); if (!f) return;
+  $('mfA').textContent = f.a;
+  $('mfT').textContent = `🛬 ${f.arr} → 🛫 ${f.dep || '–'}`;
+  $('mfS').textContent = `${f.an} · ${fmtDT(f.start)} · ${f.ins} · ${f.shift}`;
+  $('mfSt').innerHTML = f.st === 'Completado' ? '<span class="chip c-ok">✓ Completado</span>' : '<span class="chip c-run">● En proceso</span>';
+  renderFlightBody(f, null);
+  openModal('mFlight');
+  try { const r = await api('getFlight', { key }); if ($('mFlight').classList.contains('open')) renderFlightBody(f, r.photos); }
+  catch (err) { toast('Fotos: ' + err.message, true); }
+}
+function renderFlightBody(f, photos) {
+  const byCp = {};
+  (photos || []).forEach(p => (byCp[p.cp] = byCp[p.cp] || []).push(p));
+  Object.values(byCp).forEach(a => a.sort((x, y) => x.idx - y.idx));
+  LB.list = [];
+  const enPos = f.first('En Posición');
+  const mk = (l, v) => `<div class="mk"><div class="l">${l}</div><div class="v">${v}</div></div>`;
+  const fAlerts = ALERTS.filter(a => a.key === f.k);
+  const phTitle = id => (META.phases.find(p => p.id === id) || {}).title || id;
+
+  let tl = '';
+  META.phases.forEach(ph => {
+    const defs = META.cpDefs.filter(d => d.phase === ph.id && !d.group);
+    if (!defs.length) return;
+    tl += `<div class="tl-ph">${esc(ph.title)}</div>` + defs.map(d => {
+      const times = f.t[d.label] || [];
+      const ps = byCp[d.label] || [];
+      const cls = times.length ? '' : d.optional ? 'opt' : 'miss';
+      const th = ps.map(p => { const i = LB.list.push({ p, cp: d.label }) - 1; return `<img loading="lazy" src="${thumb(p.id || fileIdOf(p.url))}" alt="${esc(d.label)} ${p.idx}" onclick="openLb(${i})">`; }).join('');
+      const dm = times.length && enPos && d.label !== 'En Posición' ? mins(enPos, times[0]) : null;
+      const rel = dm === null ? '' : (dm >= 0 ? '+' : '−') + Math.abs(dm) + ' min';
+      const extra = d.label === 'Briefing' && f.bt ? `<div class="tl-m">📝 ${esc(f.bt)}${f.bn ? ' — ' + esc(f.bn) : ''}</div>` : '';
+      return `<div class="tl-row ${cls}"><div class="dot"></div>
+        <div style="min-width:0"><div class="tl-n">${esc(d.label)}${d.optional ? ' <span class="chip c-mute">opcional</span>' : ''}</div>
+          <div class="tl-m">${times.length ? (times.length > 1 ? times.length + ' capturas · ' : '') + (ps.length ? ps.length + ' foto' + (ps.length > 1 ? 's' : '') : (photos ? 'sin fotos' : '…')) : (d.optional ? 'no registrado' : '⚠ no registrado')}</div>
+          ${extra}${th ? `<div class="thumbs">${th}</div>` : ''}</div>
+        <div class="tl-t">${times.length ? times.map(fmtT).join('<br>') : '–'}${rel ? `<small>${rel}</small>` : ''}</div></div>`;
+    }).join('');
+  });
+
+  // Matriz de zonas
+  const groups = ['Inicia Descarga', 'Finaliza Descarga', 'Inicia Cargado', 'Finaliza Cargado'];
+  const zrow = z => {
+    const c = groups.map(g => {
+      const l = g + ' - ' + z, t = f.first(l), ps = byCp[l] || [];
+      const im = ps.map(p => { const i = LB.list.push({ p, cp: l }) - 1; return `<img loading="lazy" style="width:34px;height:26px;border-radius:5px;object-fit:cover;vertical-align:middle;margin-left:5px;cursor:zoom-in" src="${thumb(p.id || fileIdOf(p.url), 120)}" alt="" onclick="openLb(${i})">`; }).join('');
+      return `<td>${t ? fmtT(t) + im : '<span class="na">—</span>'}</td>`;
+    }).join('');
+    const d1 = mins(f.first('Inicia Descarga - ' + z), f.first('Finaliza Descarga - ' + z));
+    const d2 = mins(f.first('Inicia Cargado - ' + z), f.first('Finaliza Cargado - ' + z));
+    return `<tr><td>${esc(z)}</td>${c}<td>${fmtMin(d1)}</td><td>${fmtMin(d2)}</td></tr>`;
+  };
+  const ztable = `<div class="tscroll"><table class="ztbl"><tr><th>Zona</th><th>Inicia desc.</th><th>Finaliza desc.</th><th>Inicia carg.</th><th>Finaliza carg.</th><th>⏱ Descarga</th><th>⏱ Cargado</th></tr>${META.zones.map(zrow).join('')}</table></div>`;
+
+  const incs = SMS.filter(s => s.key === f.k);
+  const incHtml = incs.length ? incs.map(s => `<div class="tl-row" style="cursor:pointer" onclick="openSms('${esc(s.id)}')"><div class="dot" style="background:${/alta/i.test(s.severidad) ? 'var(--critical)' : /media/i.test(s.severidad) ? 'var(--warning)' : 'var(--good)'}"></div>
+      <div style="min-width:0"><div class="tl-n">${esc(s.ticket)} · ${esc(s.tipo)}</div><div class="tl-m" style="white-space:normal">${esc(s.descripcion)}</div></div>
+      <div class="tl-t">${sevChip(s.severidad)}<small>${esc(s.estado)}</small></div></div>`).join('') : '<div class="tl-m">Sin incidentes en este vuelo.</div>';
+
+  $('mfBody').innerHTML = `
+    <div class="mkpis">
+      ${mk('Turnaround', fmtMin(f.m.turn))}${mk('Descarga', fmtMin(f.m.desc))}${mk('Cargado', fmtMin(f.m.carg))}
+      ${mk('Obligatorios', `${f.rq}<small>/${f.rqt}</small>`)}${mk('Fotos', f.ph || 0)}${mk('Incidentes', f.inc || 0)}
     </div>
+    ${fAlerts.length ? `<div><div class="stitle">🚨 Alertas de este vuelo</div><div class="alist">${fAlerts.map(alertCard).join('')}</div></div>` : ''}
+    ${f.miss.length ? `<div class="desc" style="border-color:rgba(250,178,25,.35);color:#fcd34d">⚠ Faltantes obligatorios: ${f.miss.map(esc).join(', ')}</div>` : ''}
+    <div><div class="stitle">📦 Zonas de carga</div>${ztable}</div>
+    <div><div class="stitle">⏱ Línea de tiempo ${enPos ? '<span style="color:var(--muted);letter-spacing:0;text-transform:none">· minutos desde En Posición</span>' : ''}</div><div class="tl">${tl}</div></div>
+    <div><div class="stitle">🦺 Incidentes</div><div class="tl">${incHtml}</div></div>`;
+}
 
-    <script>
-        // ── Three.js background ──
-        const cntr = document.getElementById('canvas-container');
-        const sc = new THREE.Scene();
-        const cm = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const rd = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-        rd.setSize(window.innerWidth, window.innerHeight);
-        cntr.appendChild(rd.domElement);
-        const geo = new THREE.BufferGeometry();
-        const N = 2500, pos = new Float32Array(N * 3);
-        for (let i = 0; i < N * 3; i++) pos[i] = (Math.random() - 0.5) * 100;
-        geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-        const mat = new THREE.PointsMaterial({ size: 0.07, color: 0x3b82f6, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending });
-        const pts = new THREE.Points(geo, mat);
-        sc.add(pts); cm.position.z = 30;
-        const tg = new THREE.TorusGeometry(10, 0.4, 16, 100);
-        const tm = new THREE.MeshBasicMaterial({ color: 0x8b5cf6, wireframe: true, transparent: true, opacity: 0.12 });
-        const tr = new THREE.Mesh(tg, tm); tr.position.set(-15, 0, -20); sc.add(tr);
-        (function a() { requestAnimationFrame(a); pts.rotation.y += 0.001; tr.rotation.x += 0.008; rd.render(sc, cm); })();
-        window.addEventListener('resize', () => { cm.aspect = window.innerWidth / window.innerHeight; cm.updateProjectionMatrix(); rd.setSize(window.innerWidth, window.innerHeight); });
+function openLb(i) { LB.i = i; showLb(); $('lb').classList.add('open'); }
+function showLb() {
+  const it = LB.list[LB.i]; if (!it) return;
+  const id = it.p.id || fileIdOf(it.p.url);
+  $('lbImg').src = thumb(id, 1600);
+  $('lbCap').textContent = `${it.cp}${it.p.idx > 1 ? ' #' + it.p.idx : ''} · ${fmtDT(it.p.ts)} · ${LB.i + 1}/${LB.list.length}`;
+  $('lbLink').href = it.p.url;
+}
+function lbStep(d) { LB.i = (LB.i + d + LB.list.length) % LB.list.length; showLb(); }
+function closeLb() { $('lb').classList.remove('open'); $('lbImg').src = ''; }
+document.addEventListener('keydown', e => {
+  if ($('lb').classList.contains('open')) { if (e.key === 'ArrowRight') lbStep(1); if (e.key === 'ArrowLeft') lbStep(-1); if (e.key === 'Escape') closeLb(); return; }
+  if (e.key === 'Escape') document.querySelectorAll('.modal.open').forEach(m => closeModal(m.id));
+});
+function openModal(id) { $(id).classList.add('open'); document.body.classList.add('locked'); $(id).scrollTop = 0; }
+function closeModal(id) { $(id).classList.remove('open'); if (!document.querySelector('.modal.open')) document.body.classList.remove('locked'); }
 
-        // ── Login logic ──
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwratJLa8uJ_EYMIOPbzkh4YlrahSPUdEonIeFHtsA5fAzlxMyRFyuOeHd6sxughzXL/exec';
+// ═════════════════════════════════════════════════════════════════════════════
+//  ALERTAS
+// ═════════════════════════════════════════════════════════════════════════════
+function buildAlerts() {
+  const out = [], now = Date.now();
+  const push = a => out.push(a);
+  VIEW.forEach(f => {
+    const enPos = f.first('En Posición');
+    const tagsBase = [f.a, f.ins];
+    // 1) SLA desde En Posición
+    if (enPos) CONFIG.sla.forEach(s => {
+      const t = s.group ? (META.zones.map(z => f.first(s.group + ' - ' + z)).filter(Boolean).sort((a, b) => a - b)[0] || null) : f.first(s.cp);
+      if (t) {
+        const m = mins(enPos, t);
+        if (m > s.crit) push({ type: 'critical', icon: '⏱', key: f.k, title: `SLA crítico: ${s.label} — ${fl(f)}`, desc: `${s.label} registrado a los ${m} min de En Posición (límite ${s.crit} min).`, tags: [...tagsBase, 'SLA'], value: m, unit: 'min', at: t });
+        else if (m > s.warn) push({ type: 'warning', icon: '⏱', key: f.k, title: `SLA: ${s.label} — ${fl(f)}`, desc: `${s.label} a los ${m} min de En Posición (objetivo ${s.warn} min).`, tags: [...tagsBase, 'SLA'], value: m, unit: 'min', at: t });
+      } else if (f.st !== 'Completado' && (Date.now() - f.start) / 3600000 < CONFIG.openCritH) {
+        const m = mins(enPos, new Date());
+        if (m > s.crit + 5) push({ type: 'critical', icon: '⏰', key: f.k, title: `Pendiente: ${s.label} — ${fl(f)}`, desc: `${s.label} sin registrar y ya van ${m} min desde En Posición (SLA ${s.crit} min).`, tags: [...tagsBase, 'PENDIENTE'], value: m, unit: 'min sin registrar', at: new Date() });
+      }
+    });
+    // 2) Reporte abierto prolongado
+    if (f.st !== 'Completado') {
+      const h = (now - f.start) / 3600000;
+      if (h >= CONFIG.openCritH) push({ type: 'critical', icon: '⏳', key: f.k, title: `Reporte sin cerrar — ${fl(f)}`, desc: `Abierto hace ${Math.round(h)} h con ${f.pct}% de avance.`, tags: [...tagsBase, 'SIN CERRAR'], value: Math.round(h), unit: 'horas', at: f.start });
+      else if (h >= CONFIG.openWarnH) push({ type: 'warning', icon: '⏳', key: f.k, title: `Reporte prolongado — ${fl(f)}`, desc: `Abierto hace ${Math.round(h)} h con ${f.pct}% de avance.`, tags: [...tagsBase, 'EN PROCESO'], value: Math.round(h), unit: 'horas', at: f.start });
+    }
+    // 3) Cierre con faltantes
+    if (f.st === 'Completado' && f.miss.length) {
+      const safety = f.miss.filter(m => CONFIG.safetyCps.includes(m));
+      if (safety.length) push({ type: 'critical', icon: '🦺', key: f.k, title: `Cerrado sin controles de seguridad — ${fl(f)}`, desc: `Faltan: ${safety.join(', ')}.`, tags: [...tagsBase, 'SEGURIDAD'], value: safety.length, unit: 'faltantes', at: f.c || f.start });
+      const rest = f.miss.filter(m => !CONFIG.safetyCps.includes(m));
+      if (rest.length) push({ type: 'warning', icon: '📋', key: f.k, title: `Cerrado incompleto — ${fl(f)}`, desc: `Faltan: ${rest.join(', ')}.`, tags: [...tagsBase, 'INCOMPLETO'], value: rest.length, unit: 'faltantes', at: f.c || f.start });
+    }
+    // 4) Fotos insuficientes en Verificación
+    ['Verificación - Seguros', 'Verificación - Posición'].forEach(l => {
+      const n = (f.pc && f.pc[l]) || 0;
+      if (f.t[l] && n < CONFIG.minVerifPhotos) push({ type: 'warning', icon: '📸', key: f.k, title: `Evidencia insuficiente: ${l.replace('Verificación - ', '')} — ${fl(f)}`, desc: `${n} foto(s) en ${l}; mínimo ${CONFIG.minVerifPhotos}.`, tags: [...tagsBase, 'VERIFICACIÓN'], value: n, unit: 'fotos', at: f.last(l) });
+    });
+    // 5) Secuencia inconsistente
+    const seq = [];
+    META.zones.forEach(z => {
+      const a = f.first('Inicia Descarga - ' + z), b = f.first('Finaliza Descarga - ' + z), c = f.first('Inicia Cargado - ' + z), d = f.first('Finaliza Cargado - ' + z);
+      if (a && b && b < a) seq.push(`${z}: finaliza descarga antes de iniciar`);
+      if (b && c && c < b) seq.push(`${z}: inicia cargado antes de terminar descarga`);
+      if (c && d && d < c) seq.push(`${z}: finaliza cargado antes de iniciar`);
+    });
+    const lastCarg = META.zones.map(z => f.last('Finaliza Cargado - ' + z)).filter(Boolean).sort((a, b) => b - a)[0];
+    const push2 = f.first('Push Back');
+    if (lastCarg && push2 && push2 < lastCarg) seq.push('Push Back antes de finalizar el cargado');
+    if (seq.length) push({ type: 'warning', icon: '🔀', key: f.k, title: `Secuencia inconsistente — ${fl(f)}`, desc: seq.join(' · ') + '.', tags: [...tagsBase, 'SECUENCIA'], value: seq.length, unit: 'eventos', at: f.start });
+  });
+  // 6) Incidentes SMS abiertos
+  SMSVIEW.filter(isOpenSms).forEach(s => {
+    const crit = /alta/i.test(s.severidad), med = /media/i.test(s.severidad);
+    push({ type: crit ? 'critical' : med ? 'warning' : 'info', icon: '🦺', key: s.key, sms: s.id,
+      title: `${s.ticket} · ${s.tipo} — ${s.airline} ${s.arr}`, desc: (s.descripcion || 'Sin descripción') + ` · Estado: ${s.estado}.`,
+      tags: [s.severidad, s.inspector, 'SMS'], value: s.severidad || '–', unit: 'severidad', at: s.fecha });
+  });
+  // 7) Desempeño (informativa)
+  const by = {};
+  VIEW.forEach(f => { const u = by[f.ins] = by[f.ins] || { n: 0, full: 0 }; u.n++; if (f.st === 'Completado' && !f.miss.length) u.full++; });
+  Object.entries(by).forEach(([u, s]) => {
+    if (u && s.n >= 3 && s.full === s.n) push({ type: 'info', icon: '⭐', title: `Desempeño excelente — ${u}`, desc: `${s.n} vuelos cerrados con todos los checkpoints obligatorios.`, tags: [s.n + ' vuelos', 'RENDIMIENTO'], value: '100%', unit: 'completitud', at: null });
+  });
+  const rank = { critical: 0, warning: 1, info: 2 };
+  ALERTS = out.sort((a, b) => rank[a.type] - rank[b.type] || new Date(b.at || 0) - new Date(a.at || 0));
+}
+function alertCard(a) {
+  const chip = a.type === 'critical' ? 'c-crit' : a.type === 'warning' ? 'c-warn' : 'c-blue';
+  const click = a.sms ? `openSms('${esc(a.sms)}')` : a.key ? `openFlight('${esc(a.key)}')` : '';
+  return `<div class="acard ${a.type}" ${click ? `onclick="${click}"` : ''}>
+    <div class="a-ic">${a.icon}</div>
+    <div style="min-width:0"><div class="a-t">${esc(a.title)}</div><div class="a-d">${esc(a.desc)}</div>
+      <div class="a-tags">${a.tags.filter(Boolean).map(t => `<span class="chip ${chip}">${esc(t)}</span>`).join('')}${a.at ? `<span class="chip c-mute">${fmtDT(a.at)}</span>` : ''}</div></div>
+    <div class="a-v"><b>${esc(a.value)}</b><span>${esc(a.unit)}</span></div></div>`;
+}
+function renderAlerts() {
+  const c = t => ALERTS.filter(a => a.type === t).length;
+  $('aCrit').textContent = c('critical'); $('aWarn').textContent = c('warning'); $('aInfo').textContent = c('info');
+  document.querySelectorAll('.ascard').forEach(x => x.classList.toggle('on', x.dataset.a === S.alertMode));
+  const list = S.alertMode === 'all' ? ALERTS : ALERTS.filter(a => a.type === S.alertMode);
+  $('cAlertas').textContent = list.length;
+  $('aAll').style.display = S.alertMode === 'all' ? 'none' : '';
+  $('alist').innerHTML = list.length ? list.slice(0, 200).map(alertCard).join('') : `<div class="card empty">✅ Sin alertas ${S.alertMode === 'all' ? '' : 'de este tipo '}en el período.</div>`;
+}
+function setAlertMode(m) { S.alertMode = S.alertMode === m ? 'all' : m; renderAlerts(); }
+document.querySelectorAll('.ascard').forEach(x => x.addEventListener('click', () => setAlertMode(x.dataset.a)));
 
-        function handleLogin(e) {
-            e.preventDefault();
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value;
-            if (!username || !password) { showMsg('Complete todos los campos', 'error'); return; }
+// ═════════════════════════════════════════════════════════════════════════════
+//  ANALÍTICA
+// ═════════════════════════════════════════════════════════════════════════════
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function baseOpts(extra = {}) {
+  return Object.assign({
+    responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
+    interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#0b1024', borderColor: 'rgba(251,146,60,.35)', borderWidth: 1, titleFont: { family: 'JetBrains Mono' }, bodyFont: { family: 'JetBrains Mono' }, padding: 10 } },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 }, maxRotation: 0, autoSkip: true } },
+      y: { beginAtZero: true, grid: { color: 'rgba(148,163,184,.1)' }, border: { display: false }, ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 }, precision: 0 } }
+    }
+  }, extra);
+}
+function chart(id, cfg) {
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart($(id), cfg);
+}
+const barDs = (label, data, color, extra = {}) => Object.assign({ label, data, backgroundColor: color, borderRadius: { topLeft: 4, topRight: 4 }, borderSkipped: 'bottom', maxBarThickness: 34, borderColor: '#0f172a', borderWidth: { top: 0, left: 1, right: 1, bottom: 0 } }, extra);
 
-            setLoading(true);
-            showMsg('', '');
+function hbars(el, rows, opts = {}) {
+  const max = Math.max(1, ...rows.map(r => r.v || 0));
+  $(el).innerHTML = rows.length ? rows.map(r => `<div class="hb" title="${esc(r.n)}: ${esc(r.label ?? r.v)}"><div class="nm">${esc(r.n)}</div><div class="tr2"><i style="width:${(r.v || 0) / (opts.max || max) * 100}%;${r.c ? 'background:' + r.c : ''}"></i></div><div class="v">${esc(r.label ?? r.v)}</div></div>`).join('')
+    : '<div class="tl-m">Sin datos en el período.</div>';
+}
 
-            const cb = 'lCb' + Date.now();
-            const url = `${SCRIPT_URL}?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&callback=${cb}`;
+function renderAnalytics() {
+  if (typeof Chart === 'undefined') return;
+  const V = VIEW;
+  // Turnos
+  const shifts = [['🌅', 'Mañana', '06–14'], ['☀️', 'Tarde', '14–22'], ['🌙', 'Noche', '22–06']];
+  $('shifts').innerHTML = shifts.map(([e, n, h]) => `<div class="shift"><div class="e">${e}</div><div class="n">${V.filter(f => f.shift === n).length}</div><div class="l">${n} · ${h}</div></div>`).join('');
+  hbars('shiftTurn', shifts.map(([, n]) => { const t = V.filter(f => f.shift === n && f.m.turn !== null).map(f => f.m.turn); return { n: 'Turnaround ' + n.toLowerCase(), v: avg(t) || 0, label: t.length ? fmtMin(avg(t)) : '–' }; }));
 
-            window[cb] = function(res) {
-                setLoading(false);
-                delete window[cb];
-                const s = document.getElementById('jsonp-login');
-                if (s) s.remove();
+  // Por hora
+  const hours = Array(24).fill(0); V.forEach(f => hours[hourOf(f.start)]++);
+  chart('chHour', { type: 'bar', data: { labels: hours.map((_, i) => String(i).padStart(2, '0')), datasets: [barDs('Vuelos', hours, css('--s1'))] },
+    options: baseOpts({ plugins: { ...baseOpts().plugins, tooltip: { ...baseOpts().plugins.tooltip, callbacks: { title: i => `${i[0].label}:00 – ${i[0].label}:59` } } } }) });
 
-                if (res && res.success) {
-                    showMsg('✓ ' + res.message, 'success');
-                    const userData = { username: res.username, role: res.role, loginTime: new Date().toISOString() };
-                    sessionStorage.setItem('user', JSON.stringify(userData));
-                    setTimeout(() => showWelcome(res.username, res.role), 400);
-                } else {
-                    showMsg('✗ ' + (res ? res.message : 'Error desconocido'), 'error');
-                }
-            };
+  // Diario 14 días (desde la fecha más reciente del período)
+  const endDay = S.day || ymd(new Date());
+  const days = [...Array(14)].map((_, i) => ymd(new Date(endDay + 'T12:00:00-06:00').getTime() - (13 - i) * 86400000));
+  const dDone = days.map(d => V.filter(f => f.day === d && f.st === 'Completado').length);
+  const dRun = days.map(d => V.filter(f => f.day === d && f.st !== 'Completado').length);
+  chart('chDaily', { type: 'bar', data: { labels: days.map(d => fmtD(d + 'T12:00:00-06:00')), datasets: [
+      barDs('Completados', dDone, css('--s1'), { stack: 's', borderRadius: 0, borderColor: '#0f172a', borderWidth: { top: 2, left: 0, right: 0, bottom: 0 } }),
+      barDs('En proceso', dRun, css('--s2'), { stack: 's' })] },
+    options: baseOpts({ scales: { ...baseOpts().scales, x: { ...baseOpts().scales.x, stacked: true }, y: { ...baseOpts().scales.y, stacked: true } } }) });
 
-            const scr = document.createElement('script');
-            scr.id = 'jsonp-login';
-            scr.src = url;
-            scr.onerror = () => { setLoading(false); showMsg('✗ Error de conexión', 'error'); delete window[cb]; };
-            document.body.appendChild(scr);
+  // Aerolíneas
+  const byA = {}; V.forEach(f => { const k = f.an || f.a; (byA[k] = byA[k] || []).push(f); });
+  hbars('hbAirline', Object.entries(byA).map(([n, a]) => ({ n, v: a.length })).sort((a, b) => b.v - a.v).slice(0, 12));
+  hbars('hbTurnAirline', Object.entries(byA).map(([n, a]) => { const t = a.map(f => f.m.turn).filter(x => x !== null); return { n, v: avg(t) || 0, label: t.length ? `${fmtMin(avg(t))} (${t.length})` : '–' }; })
+    .filter(r => r.v).sort((a, b) => b.v - a.v).slice(0, 12));
 
-            setTimeout(() => {
-                if (window[cb]) {
-                    delete window[cb];
-                    setLoading(false);
-                    showMsg('✗ Tiempo de espera agotado', 'error');
-                }
-            }, 15000);
-        }
+  // Fases
+  const firstOfGroup = (f, g) => META.zones.map(z => f.first(g + ' - ' + z)).filter(Boolean).sort((a, b) => a - b)[0] || null;
+  const lastOfGroup = (f, g) => META.zones.map(z => f.last(g + ' - ' + z)).filter(Boolean).sort((a, b) => b - a)[0] || null;
+  const seg = [
+    ['En Posición → inicio descarga', f => mins(f.first('En Posición'), firstOfGroup(f, 'Inicia Descarga'))],
+    ['Descarga', f => f.m.desc],
+    ['Fin descarga → inicio cargado', f => mins(lastOfGroup(f, 'Finaliza Descarga'), firstOfGroup(f, 'Inicia Cargado'))],
+    ['Cargado', f => f.m.carg],
+    ['Fin cargado → Push Back', f => mins(lastOfGroup(f, 'Finaliza Cargado'), f.first('Push Back'))]
+  ];
+  hbars('hbPhases', seg.map(([n, fn]) => { const v = V.map(fn).filter(x => x !== null && x >= 0); return { n, v: avg(v) || 0, label: v.length ? `${fmtMin(avg(v))}` : '–' }; }));
 
-        function showWelcome(username, role) {
-            document.getElementById('welcomeUser').textContent = username;
-            document.getElementById('welcomeRole').textContent = role;
-            document.getElementById('welcome-screen').classList.add('show');
-            // Redirect to HISTORY page (new flow)
-            setTimeout(() => { window.location.href = 'H08.html'; }, 2000);
-        }
+  // Histograma turnaround (bins de 15 min)
+  const tt = V.map(f => f.m.turn).filter(x => x !== null);
+  const binW = 15, maxBin = Math.max(8, Math.ceil(Math.max(0, ...tt) / binW));
+  const bins = Array(Math.min(maxBin, 24)).fill(0);
+  tt.forEach(t => bins[Math.min(bins.length - 1, Math.floor(t / binW))]++);
+  chart('chTurnHist', { type: 'bar', data: { labels: bins.map((_, i) => i === bins.length - 1 && maxBin > 24 ? `${i * binW}+` : `${i * binW}`), datasets: [barDs('Vuelos', bins, css('--s2'), { barPercentage: 1, categoryPercentage: .92 })] },
+    options: baseOpts({ plugins: { ...baseOpts().plugins, tooltip: { ...baseOpts().plugins.tooltip, callbacks: { title: i => `${i[0].label}–${Number(i[0].label) + binW} min` } } }, scales: { ...baseOpts().scales, x: { ...baseOpts().scales.x, title: { display: true, text: 'minutos', color: '#64748b', font: { family: 'JetBrains Mono', size: 10 } } } } }) });
 
-        function setLoading(on) {
-            const btn = document.getElementById('loginBtn');
-            const txt = document.getElementById('btnText');
-            btn.disabled = on;
-            txt.innerHTML = on ? '<span class="loading-spinner"></span>Autenticando...' : 'Iniciar Sesión';
-        }
+  // Zonas
+  chart('chZones', { type: 'bar', data: { labels: META.zones, datasets: [
+      barDs('Descarga', META.zones.map(z => V.filter(f => f.zd.includes(z)).length), css('--s1')),
+      barDs('Cargado', META.zones.map(z => V.filter(f => f.zc.includes(z)).length), css('--s2'))] }, options: baseOpts() });
 
-        function showMsg(text, type) {
-            const m = document.getElementById('message');
-            m.textContent = text;
-            m.className = 'message ' + type;
-            m.style.display = text ? 'block' : 'none';
-        }
-    </script>
+  // Cumplimiento (vuelos cerrados)
+  const closed = V.filter(f => f.st === 'Completado');
+  const comp = META.cpDefs.filter(d => !d.optional).map(d => ({ n: d.label, v: closed.length ? Math.round(closed.filter(f => f.t[d.label]).length / closed.length * 100) : 0 }));
+  // zonas: se cuentan por grupo (basta una zona)
+  const groups = [...new Set(META.cpDefs.filter(d => d.group).map(d => d.group))];
+  const rows = comp.filter(r => !META.cpDefs.find(d => d.label === r.n).group)
+    .concat(groups.map(g => ({ n: g + ' (1+ zona)', v: closed.length ? Math.round(closed.filter(f => META.zones.some(z => f.t[g + ' - ' + z])).length / closed.length * 100) : 0 })))
+    .sort((a, b) => a.v - b.v);
+  hbars('hbCompliance', closed.length ? rows.map(r => ({ ...r, label: (r.v < 80 ? '⚠ ' : '') + r.v + '%', c: r.v < 80 ? css('--warning') : css('--s3') })) : [], { max: 100 });
+
+  renderRank();
+}
+function renderRank() {
+  const by = {};
+  VIEW.forEach(f => {
+    const u = by[f.ins || '–'] = by[f.ins || '–'] || { name: f.ins || '–', n: 0, done: 0, full: 0, pct: [], turn: [], ph: 0, inc: 0 };
+    u.n++; if (f.st === 'Completado') u.done++; if (f.st === 'Completado' && !f.miss.length) u.full++;
+    u.pct.push(f.pct); if (f.m.turn !== null) u.turn.push(f.m.turn); u.ph += f.ph || 0; u.inc += f.inc || 0;
+  });
+  const rows = Object.values(by).map(u => ({ ...u, avgPct: Math.round(avg(u.pct) || 0), avgTurn: avg(u.turn), phpf: u.n ? Math.round(u.ph / u.n) : 0 }));
+  const k = S.rankSort.k, dir = S.rankSort.dir;
+  const key = { name: r => r.name, n: r => r.n, done: r => r.done, avgPct: r => r.avgPct, full: r => r.full / r.n, avgTurn: r => r.avgTurn ?? 1e9, phpf: r => r.phpf, inc: r => r.inc }[k];
+  rows.sort((a, b) => (key(a) > key(b) ? 1 : key(a) < key(b) ? -1 : 0) * dir);
+  const h = (kk, t) => `<th onclick="S.rankSort={k:'${kk}',dir:S.rankSort.k==='${kk}'?-S.rankSort.dir:-1};renderRank()">${t}${S.rankSort.k === kk ? (S.rankSort.dir < 0 ? ' ↓' : ' ↑') : ''}</th>`;
+  $('rankIns').innerHTML = `<tr>${h('name', 'Inspector')}${h('n', 'Vuelos')}${h('done', 'Cerrados')}${h('avgPct', 'Avance')}${h('full', 'Sin faltantes')}${h('avgTurn', 'Turnaround')}${h('phpf', 'Fotos/vuelo')}${h('inc', 'Inc.')}</tr>` +
+    (rows.length ? rows.map(r => `<tr><td>${esc(r.name)}</td><td>${r.n}</td><td>${r.done}</td><td>${r.avgPct}%</td><td>${r.n ? Math.round(r.full / r.n * 100) : 0}%</td><td>${fmtMin(r.avgTurn)}</td><td>${r.phpf}</td><td>${r.inc}</td></tr>`).join('') : '<tr><td colspan="8" class="na">Sin datos</td></tr>');
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  SMS
+// ═════════════════════════════════════════════════════════════════════════════
+function renderSms() {
+  const est = $('smsEstado').value, sev = $('smsSev').value, tipo = $('smsTipo').value;
+  const base = SMSVIEW;
+  const list = base.filter(s => (est === 'all' || (est === 'open' ? isOpenSms(s) : s.estado === est))
+    && (sev === 'all' || new RegExp(sev, 'i').test(s.severidad)) && (tipo === 'all' || s.tipo === tipo))
+    .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  const cnt = r => base.filter(s => r.test(s.severidad)).length;
+  $('sTotal').textContent = base.length; $('sBaja').textContent = cnt(/baja/i); $('sMedia').textContent = cnt(/media/i); $('sAlta').textContent = cnt(/alta/i);
+  const open = base.filter(isOpenSms);
+  $('sOpen').textContent = open.length;
+  $('sOpenS').textContent = open.filter(s => (Date.now() - new Date(s.fecha)) > 7 * 86400000).length + ' con más de 7 días';
+  const closeDays = base.filter(s => s.cierre && s.fecha).map(s => (new Date(s.cierre) - new Date(s.fecha)) / 86400000).filter(x => x >= 0);
+  $('sClose').textContent = closeDays.length ? (avg(closeDays)).toFixed(1) : '–';
+  $('cSms').textContent = list.length;
+
+  $('tbSms').innerHTML = list.length ? list.map(s => {
+    const id = fileIdOf(s.fotoUrl);
+    return `<div class="tr" onclick="openSms('${esc(s.id)}')">
+      <div class="td" data-l="Ticket"><b>${esc(s.ticket)}</b></div>
+      <div class="td" data-l="Fecha">${fmtDT(s.fecha)}</div>
+      <div class="td wide"><span class="al-badge">${esc(s.airline)}</span>🛬 ${esc(s.arr)} · 🛫 ${esc(s.dep || '–')}</div>
+      <div class="td" data-l="Tipo">${esc(s.tipo)}</div>
+      <div class="td" data-l="Severidad">${sevChip(s.severidad)}</div>
+      <div class="td" data-l="Estado">${estChip(s.estado)}</div>
+      <div class="td" data-l="Reportó">${esc(s.inspector)}</div>
+      <div class="td" data-l="Foto">${id ? `<img src="${thumb(id, 120)}" alt="" style="width:40px;height:30px;object-fit:cover;border-radius:6px">` : '<span class="na">—</span>'}</div></div>`;
+  }).join('') : `<div class="empty">✅ No hay reportes SMS para este filtro.</div>`;
+
+  // Gráficas SMS
+  const byT = {}; base.forEach(s => byT[s.tipo || '–'] = (byT[s.tipo || '–'] || 0) + 1);
+  hbars('hbSmsType', Object.entries(byT).map(([n, v]) => ({ n, v })).sort((a, b) => b.v - a.v));
+  if (typeof Chart !== 'undefined' && S.tab === 'sms') {
+    const wk = d => { const x = new Date(new Date(d).toLocaleDateString('en-CA', { timeZone: TZ }) + 'T12:00:00'); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x.toISOString().slice(0, 10); };
+    const weeks = [...new Set(base.map(s => wk(s.fecha)))].sort().slice(-12);
+    const ser = r => weeks.map(w => base.filter(s => wk(s.fecha) === w && r.test(s.severidad)).length);
+    const o = baseOpts({ scales: { ...baseOpts().scales, x: { ...baseOpts().scales.x, stacked: true }, y: { ...baseOpts().scales.y, stacked: true } } });
+    const st = { stack: 's', borderRadius: 0, borderWidth: { top: 2, left: 0, right: 0, bottom: 0 } };
+    chart('chSmsWeek', { type: 'bar', data: { labels: weeks.map(w => 'Sem ' + fmtD(w + 'T12:00:00-06:00')), datasets: [
+        barDs('🟢 Baja', ser(/baja/i), css('--good'), st), barDs('🟡 Media', ser(/media/i), css('--warning'), st),
+        barDs('🔴 Alta', ser(/alta/i), css('--critical'), { stack: 's' })] }, options: o });
+  }
+}
+function openSms(id) {
+  const s = SMS.find(x => x.id === id); if (!s) return;
+  const f = FLIGHTS.find(x => x.k === s.key);
+  $('msT').textContent = `${s.ticket} · ${s.tipo}`;
+  $('msS').textContent = `${s.airline} 🛬${s.arr} 🛫${s.dep || '–'} · ${fmtDT(s.fecha)} · ${s.inspector}`;
+  const pid = fileIdOf(s.fotoUrl);
+  LB.list = pid ? [{ p: { id: pid, url: s.fotoUrl, idx: 1, ts: s.fecha }, cp: 'Incidente ' + s.ticket }] : [];
+  $('msBody').innerHTML = `
+    <div class="mkpis">
+      <div class="mk"><div class="l">Severidad</div><div class="v" style="font-size:14px">${sevChip(s.severidad)}</div></div>
+      <div class="mk"><div class="l">Estado</div><div class="v" style="font-size:14px">${estChip(s.estado)}</div></div>
+      <div class="mk"><div class="l">Días abierto</div><div class="v">${Math.max(0, Math.round(((s.cierre ? new Date(s.cierre) : new Date()) - new Date(s.fecha)) / 86400000))}</div></div>
+      <div class="mk"><div class="l">Últ. actualización</div><div class="v" style="font-size:12px">${s.act ? fmtDT(s.act) + '<br><small>' + esc(s.actPor) + '</small>' : '–'}</div></div>
+    </div>
+    <div><div class="stitle">📝 Descripción</div><div class="desc">${esc(s.descripcion || 'Sin descripción')}${s.fotoRef ? `\n\n📎 Foto referida: ${esc(s.fotoRef)}` : ''}</div></div>
+    ${pid ? `<div><div class="stitle">📸 Evidencia</div><img src="${thumb(pid, 800)}" alt="Foto del incidente" style="max-width:100%;max-height:340px;border-radius:12px;cursor:zoom-in" onclick="openLb(0)"></div>` : ''}
+    ${s.enOrigen === 'No' ? '<div class="desc" style="color:#fcd34d">⚠ Este incidente ya no existe en el Sheet operativo; se conserva aquí como registro SMS.</div>' : ''}
+    <div><div class="stitle">🛠 Gestión SMS</div>
+      <form class="form" onsubmit="saveSms(event,'${esc(s.id)}')">
+        <div class="row2">
+          <div><label for="smE">Estado</label><select id="smE">${META.smsStates.map(x => `<option ${x === s.estado ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
+          <div><label for="smR">Responsable</label><input id="smR" value="${esc(s.responsable)}" placeholder="Quién da seguimiento"></div>
+        </div>
+        ${REQUIRE_LOGIN ? '' : `<div><label for="smP">Tu nombre (queda en "Actualizado por")</label><input id="smP" required value="${esc(session.username === 'Supervisión' ? '' : session.username)}" placeholder="Nombre de quien actualiza"></div>`}
+        <div><label for="smA">Acción correctiva</label><textarea id="smA" placeholder="Medida tomada o planificada">${esc(s.accion)}</textarea></div>
+        <div><label for="smN">Notas de seguimiento</label><textarea id="smN" placeholder="Investigación, causa raíz, verificación de eficacia…">${esc(s.notas)}</textarea></div>
+        <button class="btn-p" id="smBtn" type="submit">💾 Guardar seguimiento</button>
+      </form></div>
+    ${f ? `<button class="rbtn" style="justify-self:start" onclick="closeModal('mSms');openFlight('${esc(f.k)}')">✈️ Ver inspección del vuelo</button>` : ''}`;
+  openModal('mSms');
+}
+async function saveSms(e, id) {
+  e.preventDefault();
+  const b = $('smBtn'); b.disabled = true; b.textContent = 'Guardando…';
+  const p = { id, estado: $('smE').value, responsable: $('smR').value.trim(), accion: $('smA').value.trim(), notas: $('smN').value.trim() };
+  if (!REQUIRE_LOGIN) {
+    p.por = $('smP').value.trim();
+    try { localStorage.setItem('cargoDashName', p.por); } catch (e2) {}
+    session.username = p.por; $('unm').textContent = p.por; $('uav').textContent = p.por.slice(0, 2).toUpperCase();
+  }
+  try {
+    await api('updateSms', p);
+    const s = SMS.find(x => x.id === id);
+    Object.assign(s, { estado: p.estado, responsable: p.responsable, accion: p.accion, notas: p.notas, actPor: session.username, act: new Date().toISOString() });
+    if ((p.estado === 'Cerrado' || p.estado === 'Archivado') && !s.cierre) s.cierre = new Date().toISOString();
+    if (p.estado !== 'Cerrado' && p.estado !== 'Archivado') s.cierre = '';
+    toast('✓ ' + s.ticket + ' actualizado');
+    closeModal('mSms');
+    applyFilters();
+  } catch (err) { toast(err.message, true); b.disabled = false; b.textContent = '💾 Guardar seguimiento'; }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  EXPORTAR
+// ═════════════════════════════════════════════════════════════════════════════
+function xlsx(rows, sheet, file) {
+  if (typeof XLSX === 'undefined') return toast('No se cargó la librería de Excel', true);
+  const ws = XLSX.utils.json_to_sheet(rows), wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheet);
+  XLSX.writeFile(wb, file + '_' + ymd(new Date()) + '.xlsx');
+}
+function exportFlights() {
+  xlsx(VIEW.map(f => {
+    const o = { 'Aerolínea': f.an, 'Vuelo Llegada': f.arr, 'Vuelo Salida': f.dep, 'Inspector': f.ins, 'Turno': f.shift, 'Inicio': fmtDT(f.start),
+      'Estado': f.st, 'Checkpoints registrados': `${f.done}/${f.total}`, 'Obligatorios': `${f.rq}/${f.rqt}`, 'Avance %': f.pct, 'Turnaround (min)': f.m.turn ?? '', 'Descarga (min)': f.m.desc ?? '',
+      'Cargado (min)': f.m.carg ?? '', 'Fotos': f.ph, 'Incidentes': f.inc, 'Faltantes': f.miss.join(', ') };
+    META.cpDefs.forEach(d => { o[d.label] = (f.t[d.label] || []).map(fmtT).join(' / '); });
+    return o;
+  }), 'Vuelos', 'rampa_cargo_vuelos');
+}
+function exportSms() {
+  xlsx(SMSVIEW.map(s => ({ 'Ticket': s.ticket, 'Fecha': fmtDT(s.fecha), 'Aerolínea': s.airline, 'Vuelo Llegada': s.arr, 'Vuelo Salida': s.dep, 'Tipo': s.tipo,
+    'Severidad': s.severidad, 'Descripción': s.descripcion, 'Reportó': s.inspector, 'Estado': s.estado, 'Responsable': s.responsable,
+    'Acción correctiva': s.accion, 'Notas': s.notas, 'Fecha cierre': s.cierre ? fmtDT(s.cierre) : '', 'Foto': s.fotoUrl })), 'SMS', 'rampa_cargo_sms');
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  UI GENERAL
+// ═════════════════════════════════════════════════════════════════════════════
+$('tabs').addEventListener('click', e => {
+  const b = e.target.closest('.tab'); if (!b) return;
+  S.tab = b.dataset.t;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t === b));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === 'p-' + S.tab));
+  b.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  if (S.tab === 'analitica') renderAnalytics();
+  if (S.tab === 'sms') renderSms();
+});
+function updateHdr() { document.documentElement.style.setProperty('--hdr', $('hdr').offsetHeight + 'px'); }
+addEventListener('resize', updateHdr); updateHdr();
+let toastT;
+function toast(m, err) { const t = $('toast'); t.textContent = m; t.className = 'toast show' + (err ? ' err' : ''); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 3200); }
+
+(function boot() {
+  if (!REQUIRE_LOGIN) {
+    if (!/^https:\/\/script\.google\.com\//.test(API_URL)) toast('Configuración pendiente: pegue la URL /exec del espejo en API_URL.', true);
+    startApp(); return;
+  }
+  if (!/^https:\/\/script\.google\.com\//.test(API_URL)) { $('lerr').textContent = 'Configuración pendiente: pegue la URL /exec del espejo en API_URL.'; }
+  try { const s = JSON.parse(sessionStorage.getItem('cargoDash') || 'null'); if (s && s.token) { session = s; startApp(); return; } } catch (e) {}
+  $('lu').focus();
+})();
+</script>
 </body>
 </html>
