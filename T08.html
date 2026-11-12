@@ -312,6 +312,8 @@ body.modal-open{overflow:hidden}
               <option value="ACA">Air Canada Cargo</option>
               <option value="XAU">Aerolink</option>
               <option value="AJT">Amerijet</option>
+              <option value="UNW">Uniworld</option>
+              <option value="CHR">Charter</option>
             </optgroup>
           </select>
         </div>
@@ -482,7 +484,7 @@ let inspectionUser = { username: '', role: 'Inspector' };
 const AIRLINE_NAMES = {
   DHL:'DHL', CGJ:'Cargo Jet', ABX:'ABX Air', TPA:'Tampa Cargo', UPS:'UPS', FDX:'FedEx',
   CST:'Costeña', 'CST-DHL':'Costeña / DHL', ACB:'Aercarbe', LAN:'LAN Cargo', ACA:'Air Canada Cargo',
-  XAU:'Aerolink', AJT:'Amerijet'
+  XAU:'Aerolink', AJT:'Amerijet', UNW:'Uniworld', CHR:'Charter'
 };
 
 const BRIEFING_TOPICS = [
@@ -523,6 +525,7 @@ const CHECKPOINTS = [
   { key:'briefing',          label:'Briefing',              emoji:'📋', phase:'pre',      type:'briefing' },
   { key:'foto_briefing',     label:'Foto Briefing',         emoji:'📸', phase:'pre' },
   { key:'inicio_fod',        label:'Inicio FOD',            emoji:'🔍', phase:'pre' },
+  { key:'aeronave_tierra',   label:'Aeronave en Tierra',    emoji:'🛬', phase:'arribo' },
   { key:'en_posicion',       label:'En Posición',           emoji:'✈️', phase:'arribo' },
   { key:'360_inicio',        label:'360 Inicio Operación',  emoji:'🔄', phase:'arribo',   type:'multi' },
   { key:'planta_electrica',  label:'Planta Eléctrica',      emoji:'⚡', phase:'arribo',   optional:true },
@@ -537,12 +540,14 @@ const CHECKPOINTS = [
   { key:'finaliza_cargado',  label:'Finaliza Cargado',      emoji:'✅', phase:'fcargado', type:'zones' },
   { key:'remolque',          label:'Remolque',              emoji:'🔧', phase:'salida' },
   { key:'360_fin',           label:'360 Fin Operación',     emoji:'🔄', phase:'salida',   type:'multi' },
+  { key:'cierre_puertas',    label:'Cierre de Puertas',     emoji:'🚪', phase:'salida' },
   { key:'push_back',         label:'Push Back',             emoji:'⬅️', phase:'salida' },
   { key:'fod_final',         label:'FOD Final',             emoji:'🔍', phase:'salida' },
+  { key:'debriefing',        label:'Debriefing',            emoji:'🗣️', phase:'salida' },
 ];
 
 const zoneItem = (cp, z) => `${cp.label} - ${z.label}`;
-// Lista plana de columnas del Sheet (31)
+// Lista plana de columnas del Sheet (34)
 const CARGO_ITEMS = CHECKPOINTS.flatMap(cp => cp.type === 'zones' ? ZONES.map(z => zoneItem(cp, z)) : [cp.label]);
 const NON_COLUMN_ITEMS = ['Incidente', 'Observaciones'];
 
